@@ -201,6 +201,23 @@
 </div>
 
 <main class="scene">
+    <div id="characterIntro"
+     style="position:fixed;inset:0;display:none;
+            align-items:center;justify-content:center;
+            background:rgba(0,0,0,0.6);z-index:50;">
+  <div id="characterGrid"
+       style="display:grid;
+              grid-template-columns:1fr 1fr;
+              grid-template-rows:1fr 1fr;
+              gap:14px;
+              padding:22px;
+              background:#141820;
+              border:1px solid rgba(180,200,255,0.45);
+              border-radius:12px;
+              font-size:26px;
+              text-align:center;">
+  </div>
+</div>
   <div class="cube-wrapper" id="cubeWrapper" style="--spin-speed:18s">
     <div class="grid-cube" id="gridCube"></div>
   </div>
@@ -274,11 +291,13 @@
 
   // character stimulus sets (REPLACES old shapes[] completely)
   const charSets = {
-    numbers: ['1','2','3','4','5'],
-    latin:   ['A','B','C','D','E'],
-    greek:   ['α','β','γ','δ','ε'],
-    roman:   ['I','II','III','IV','V']
+    123: ['1','2','3','4','5'],
+    ABC:   ['A','B','C','D','E'],
+    αβγ:   ['α','β','γ','δ','ε'],
+    IV:   ['I','II','III','IV','V']
   };
+  const characterSetKeys = Object.keys(charSets);
+let characterGridLayout = {};
 
   // 2x2 character-set layout (generated on start)
   let charGridLayout = null;
@@ -291,6 +310,34 @@
   cubeDimension.onchange = e => buildCube(+e.target.value);
   rotationSpeed.oninput = e =>
     cubeWrapper.style.setProperty('--spin-speed', `${e.target.value}s`);
+
+function showCharacterIntro() {
+  if (!shapeOn.checked) return;
+
+  const intro = document.getElementById('characterIntro');
+  const grid = document.getElementById('characterGrid');
+
+  grid.innerHTML = '';
+  characterGridLayout = {};
+
+  const shuffled = [...characterSetKeys].sort(() => Math.random() - 0.5);
+
+  shuffled.forEach((key, i) => {
+    characterGridLayout[key] = {
+      x: i % 2,
+      y: Math.floor(i / 2)
+    };
+
+    const cell = document.createElement('div');
+    cell.textContent = key.toUpperCase();
+    cell.style.padding = '14px';
+    cell.style.border = '1px solid rgba(180,200,255,0.25)';
+    grid.appendChild(cell);
+  });
+
+  intro.style.display = 'flex';
+  setTimeout(() => intro.style.display = 'none', 2000);
+}
 
   function buildCube(n) {
     gridCube.innerHTML = '';
@@ -460,6 +507,7 @@
   }
 
   startBtn.onclick = () => {
+  showCharacterIntro();
     stopGame();
     history = [];
     expected.clear();
