@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>3D N-Back Cube</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: #141820;
+      --border-outer: rgba(180, 200, 255, 0.45);
+      --border-inner: rgba(180, 200, 255, 0.2);
+      --cell-fill: rgba(120, 140, 255, 0.1);
+      --cell-active: rgba(120, 200, 255, 0.6);
+      --text: #e6ebff;
+      --cube-size: 220px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #101420, var(--bg));
+      color: var(--text);
+      font-family: system-ui, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ---------- SETTINGS ---------- */
+    .settings-btn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 30;
+      background: var(--panel);
+      border: 1px solid var(--border-outer);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .settings {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 320px;
+      background: linear-gradient(180deg, #141820, #0f1218);
+      border-right: 1px solid var(--border-outer);
+      padding: 20px;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      z-index: 29;
+      overflow-y: auto;
+    }
+
+    .settings.open { transform: translateX(0); }
+
+    .settings h2 { margin-top: 0; font-size: 18px; }
+
+    .setting-group { margin-bottom: 14px; }
+
+    label { display: block; margin-bottom: 6px; opacity: 0.85; }
+
+    select, input[type=number] {
+      width: 100%;
+      padding: 8px;
+      background: #0e121a;
+      color: var(--text);
+      border: 1px solid var(--border-inner);
+      border-radius: 6px;
+    }
+
+    /* ---------- HUD ---------- */
+    .hud {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      font-size: 14px;
+      text-align: right;
+      opacity: 0.9;
+      z-index: 10;
+    }
+
+    /* ---------- SCENE ---------- */
+    .scene {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      perspective: 1200px;
+    }
+
+    .cube-wrapper {
+      width: var(--cube-size);
+      height: var(--cube-size);
+      transform-style: preserve-3d;
+      animation: spin var(--spin-speed) linear infinite;
+      transform-origin: center center;
+      pointer-events: none;
+    }
+
+    @keyframes spin {
+      from { transform: rotateX(-30deg) rotateY(0deg); }
+      to   { transform: rotateX(330deg) rotateY(360deg); }
+    }
+
+    .grid-cube {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+    }
+
+    .cell {
+      position: absolute;
+      transform-style: preserve-3d;
+    }
+
+    .cell-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: var(--cell-fill);
+      border: 1px solid var(--border-inner);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: var(--text);
+      user-select: none;
+    }
+
+    .cell.active .cell-face { background: var(--cell-active); }
+
+    /* ---------- UI ---------- */
+    .ui {
+      margin-top: 28px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    .ui button {
+      padding: 8px 12px;
+      background: var(--panel);
+      border: 1px solid var(--border-outer);
+      color: var(--text);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<button class="settings-btn">⚙ Settings</button>
+
+<aside class="settings" id="settingsPanel">
+  <h2>Settings</h2>
+
+  <div class="setting-group">
+    <label>Cube Dimension</label>
+    <select id="cubeDimension">
+      <option value="3">3 × 3 × 3</option>
+      <option value="4">4 × 4 × 4</option>
+    </select>
+  </div>
+
+  <div class="setting-group">
+    <label>Rotation Speed (seconds)</label>
+    <input type="number" id="rotationSpeed" value="18" min="5" />
+  </div>
+
+  <div class="setting-group">
+    <label>Stimulus Interval (ms)</label>
+    <input type="number" id="intervalMs" value="2500" min="500" />
+  </div>
+
+  <div class="setting-group">
+    <label>N Value</label>
+    <input type="number" id="nValue" value="2" min="1" />
+  </div>
+
+  <div class="setting-group"><label><input type="checkbox" id="directionalOn"> Directional</label></div>
+  <div class="setting-group"><label><input type="checkbox" id="soundOn"> Sound</label></div>
+  <div class="setting-group"><label><input type="checkbox" id="colorOn"> Color</label></div>
+  <div class="setting-group"><label><input type="checkbox" id="shapeOn"> Shape</label></div>
+  <div class="setting-group"><label><input type="checkbox" id="sizeOn"> Size</label></div>
+</aside>
+
+<div class="hud">
+  <div>Interval: <span id="intervalCount">0</span></div>
+  <div>Accuracy: <span id="accuracy">—</span></div>
+  <div>Today: <span id="minutes">0</span> min</div>
+</div>
+
+<main class="scene">
+  <div class="cube-wrapper" id="cubeWrapper" style="--spin-speed:18s">
+    <div class="grid-cube" id="gridCube"></div>
+  </div>
+
+  <div class="ui">
+    <button id="startBtn">Start</button>
+    <button id="stopBtn">Stop</button>
+    <button id="positionBtn">Position</button>
+    <button data-dir="north">North</button>
+    <button data-dir="south">South</button>
+    <button data-dir="east">East</button>
+    <button data-dir="west">West</button>
+    <button data-dir="above">Above</button>
+    <button data-dir="below">Below</button>
+    <button id="soundBtn">Sound</button>
+    <button id="colorBtn">Color</button>
+    <button id="shapeBtn">Char</button>
+    <button data-char="char-north">C↑</button>
+    <button data-char="char-south">C↓</button>
+    <button data-char="char-east">C→</button>
+    <button data-char="char-west">C←</button>
+    <button data-char="char-higher">C+</button>
+    <button data-char="char-lower">C−</button>
+    <button id="sizeBtn">Size</button>
+  </div>
+</main>
+
+<script>
+  const gridCube = document.getElementById('gridCube');
+  const cubeWrapper = document.getElementById('cubeWrapper');
+
+  const intervalCountEl = document.getElementById('intervalCount');
+  const accuracyEl = document.getElementById('accuracy');
+  const minutesEl = document.getElementById('minutes');
+
+  const cubeDimension = document.getElementById('cubeDimension');
+  const rotationSpeed = document.getElementById('rotationSpeed');
+  const intervalMs = document.getElementById('intervalMs');
+  const nValue = document.getElementById('nValue');
+
+  const directionalOn = document.getElementById('directionalOn');
+  const soundOn = document.getElementById('soundOn');
+  const colorOn = document.getElementById('colorOn');
+  const shapeOn = document.getElementById('shapeOn');
+  const sizeOn = document.getElementById('sizeOn');
+
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const positionBtn = document.getElementById('positionBtn');
+  const soundBtn = document.getElementById('soundBtn');
+  const colorBtn = document.getElementById('colorBtn');
+  const shapeBtn = document.getElementById('shapeBtn');
+  const sizeBtn = document.getElementById('sizeBtn');
+
+  let cells = [];
+  let history = [];
+  let expected = new Set();
+  let interval = null;
+  let intervalCount = 0;
+  let correct = 0;
+  let total = 0;
+
+  // time tracking (today)
+  let sessionStart = null;
+  let minutesToday = 0;
+
+  // stimuli pools
+  const sounds = [220, 330, 440, 550];
+  const colors = ['#ff6b6b', '#4dabf7', '#51cf66', '#fcc419'];
+  const sizes = [18, 24, 32, 40];
+
+  // character stimulus sets (REPLACES old shapes[] completely)
+  const charSets = {
+    numbers: ['1','2','3','4','5'],
+    latin:   ['A','B','C','D','E'],
+    greek:   ['α','β','γ','δ','ε'],
+    roman:   ['I','II','III','IV','V']
+  };
+
+  // 2x2 character-set layout (generated on start)
+  let charGridLayout = null;
+
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  document.querySelector('.settings-btn').onclick = () =>
+    document.getElementById('settingsPanel').classList.toggle('open');
+
+  cubeDimension.onchange = e => buildCube(+e.target.value);
+  rotationSpeed.oninput = e =>
+    cubeWrapper.style.setProperty('--spin-speed', `${e.target.value}s`);
+
+  function buildCube(n) {
+    gridCube.innerHTML = '';
+    cells = [];
+    const size = gridCube.clientWidth;
+    const cellSize = size / n;
+    const offset = (n - 1) / 2;
+
+    for (let x = 0; x < n; x++)
+      for (let y = 0; y < n; y++)
+        for (let z = 0; z < n; z++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.style.width = cell.style.height = `${cellSize}px`;
+          cell.style.transform = `translate3d(${(x-offset)*cellSize}px, ${(y-offset)*cellSize}px, ${(z-offset)*cellSize}px)`;
+          cell.dataset.x = x; cell.dataset.y = y; cell.dataset.z = z;
+          createFaces(cell, cellSize);
+          gridCube.appendChild(cell);
+          cells.push(cell);
+        }
+  }
+
+  function createFaces(cell, size) {
+    const rotations = [
+      'rotateY(0deg)','rotateY(180deg)','rotateY(90deg)',
+      'rotateY(-90deg)','rotateX(90deg)','rotateX(-90deg)'
+    ];
+    rotations.forEach(r => {
+      const f = document.createElement('div');
+      f.className = 'cell-face';
+      f.style.transform = `${r} translateZ(${size/2}px)`;
+      cell.appendChild(f);
+    });
+  }
+
+  function playTone(freq) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.value = freq;
+    gain.gain.value = 0.05;
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.15);
+  }
+
+  function clearCells() {
+    cells.forEach(c => {
+      c.classList.remove('active');
+      c.querySelectorAll('.cell-face').forEach(f => {
+        f.style.background = '';
+        f.textContent = '';
+        f.style.fontSize = '';
+      });
+    });
+  }
+
+  function generateCharGrid() {
+    const sets = Object.keys(charSets);
+    const positions = [
+      {x:0,y:0},{x:1,y:0},
+      {x:0,y:1},{x:1,y:1}
+    ];
+    charGridLayout = {};
+    sets.sort(() => Math.random() - 0.5)
+        .forEach((s,i) => { charGridLayout[s] = positions[i]; });
+  }
+
+  function nextStimulus() {
+    if (expected.size) {
+      total += expected.size;
+      expected.clear();
+      updateAccuracy();
+    }
+
+    clearCells();
+
+    const cell = cells[Math.floor(Math.random()*cells.length)];
+    cell.classList.add('active');
+
+    let sound = null;
+    let color = null;
+    let shape = null;
+    let size = null;
+
+    if (soundOn.checked) {
+      sound = sounds[Math.floor(Math.random()*sounds.length)];
+      playTone(sound);
+    }
+
+    if (colorOn.checked) {
+      color = colors[Math.floor(Math.random()*colors.length)];
+      cell.querySelectorAll('.cell-face').forEach(f => f.style.background = color);
+    }
+
+    if (shapeOn.checked) {
+      const setNames = Object.keys(charSets);
+      const set = setNames[Math.floor(Math.random()*setNames.length)];
+      const idx = Math.floor(Math.random()*charSets[set].length);
+      shape = { set, idx };
+      const glyph = charSets[set][idx];
+      cell.querySelectorAll('.cell-face').forEach(f => f.textContent = glyph);
+    }
+
+    if (sizeOn.checked) {
+      size = sizes[Math.floor(Math.random()*sizes.length)];
+      cell.querySelectorAll('.cell-face').forEach(f => f.style.fontSize = `${size}px`);
+    }
+
+    history.push({ cell, sound, color, shape, size });
+
+    const n = +nValue.value;
+    if (history.length > n) {
+      const a = history[history.length - 1 - n];
+      const b = history[history.length - 1];
+
+      if (a.cell === b.cell) expected.add('position');
+
+      if (directionalOn.checked) {
+        const dx = b.cell.dataset.x - a.cell.dataset.x;
+        const dy = b.cell.dataset.y - a.cell.dataset.y;
+        const dz = b.cell.dataset.z - a.cell.dataset.z;
+        if (dx > 0) expected.add('east');
+        if (dx < 0) expected.add('west');
+        if (dy > 0) expected.add('south');
+        if (dy < 0) expected.add('north');
+        if (dz > 0) expected.add('above');
+        if (dz < 0) expected.add('below');
+      }
+
+      if (soundOn.checked && a.sound === b.sound) expected.add('sound');
+      if (colorOn.checked && a.color === b.color) expected.add('color');
+
+      if (shapeOn.checked && a.shape && b.shape &&
+          a.shape.set === b.shape.set && a.shape.idx === b.shape.idx) {
+        expected.add('shape');
+      }
+
+      if (shapeOn.checked && a.shape && b.shape && charGridLayout) {
+        const pa = charGridLayout[a.shape.set];
+        const pb = charGridLayout[b.shape.set];
+        if (pb.x > pa.x) expected.add('char-east');
+        if (pb.x < pa.x) expected.add('char-west');
+        if (pb.y > pa.y) expected.add('char-south');
+        if (pb.y < pa.y) expected.add('char-north');
+        if (b.shape.idx > a.shape.idx) expected.add('char-higher');
+        if (b.shape.idx < a.shape.idx) expected.add('char-lower');
+      }
+
+      if (sizeOn.checked && a.size === b.size) expected.add('size');
+    }
+
+    intervalCount++;
+    intervalCountEl.textContent = intervalCount;
+  }
+
+  function updateAccuracy() {
+    accuracyEl.textContent = total ? `${Math.round((correct/total)*100)}%` : '—';
+  }
+
+  function respond(type) {
+    total++;
+    if (expected.has(type)) {
+      correct++;
+      expected.delete(type);
+    }
+    updateAccuracy();
+  }
+
+  startBtn.onclick = () => {
+    stopGame();
+    history = [];
+    expected.clear();
+    intervalCount = correct = total = 0;
+    updateAccuracy();
+
+    if (shapeOn.checked) generateCharGrid();
+
+    sessionStart = Date.now();
+    nextStimulus();
+    interval = setInterval(nextStimulus, +intervalMs.value);
+  };
+
+  function stopGame() {
+    clearInterval(interval);
+    interval = null;
+    clearCells();
+    if (sessionStart) {
+      minutesToday += (Date.now() - sessionStart) / 60000;
+      sessionStart = null;
+      minutesEl.textContent = Math.floor(minutesToday);
+    }
+  }
+
+  stopBtn.onclick = stopGame;
+
+  positionBtn.onclick = () => respond('position');
+  soundBtn.onclick = () => respond('sound');
+  colorBtn.onclick = () => respond('color');
+  shapeBtn.onclick = () => respond('shape');
+  sizeBtn.onclick = () => respond('size');
+
+  document.querySelectorAll('[data-dir]')
+    .forEach(b => b.onclick = () => respond(b.dataset.dir));
+
+  document.querySelectorAll('[data-char]')
+    .forEach(b => b.onclick = () => respond(b.dataset.char));
+
+  buildCube(3);
+</script>
+
+</body>
+</html>
