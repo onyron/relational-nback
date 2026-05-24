@@ -100,74 +100,40 @@
       justify-content: space-between;
       gap: 16px;
       padding: 14px 22px;
-      border-bottom: 1px solid var(--border-subtle);
-      background: linear-gradient(180deg, rgba(20,26,42,0.85), rgba(20,26,42,0.45));
-      backdrop-filter: blur(10px);
-      position: sticky;
-      top: 0;
-      z-index: 20;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .brand-logo {
-      width: 38px; height: 38px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      display: grid;
-      place-items: center;
-      font-weight: 800;
-      font-size: 18px;
-      color: #0a0e18;
-      box-shadow: var(--glow-accent);
-      position: relative;
-    }
-    .brand-logo::after {
-      content: '';
+      border-bottom: none;
+      background: transparent;
+      backdrop-filter: none;
       position: absolute;
-      inset: -3px;
-      border-radius: 12px;
-      border: 1px solid rgba(110,231,255,0.3);
-      pointer-events: none;
-    }
-    .brand-text h1 {
-      margin: 0;
-      font-size: 15px;
-      letter-spacing: 0.5px;
-      font-weight: 700;
-    }
-    .brand-text p {
-      margin: 2px 0 0;
-      font-size: 10px;
-      color: var(--text-dim);
-      letter-spacing: 1.8px;
-      text-transform: uppercase;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
     }
 
     .stats {
       display: flex;
       gap: 10px;
+      align-items: stretch;
     }
     .stat-card {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 8px 14px;
+      gap: 8px;
+      padding: 0 12px;
+      height: 38px;
+      box-sizing: border-box;
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 10px;
-      min-width: 120px;
+      min-width: 110px;
       box-shadow: var(--shadow-sm);
     }
     .stat-icon {
-      width: 30px; height: 30px;
-      border-radius: 7px;
+      width: 24px; height: 24px;
+      border-radius: 6px;
       display: grid;
       place-items: center;
-      font-size: 14px;
+      font-size: 11px;
       background: rgba(110,231,255,0.1);
       border: 1px solid rgba(110,231,255,0.25);
       color: var(--accent);
@@ -175,24 +141,18 @@
     .stat-icon.alt { background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.25); color: var(--accent-2); }
     .stat-icon.good { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.3); color: var(--success); }
     .stat-label {
-      font-size: 9.5px;
+      font-size: 8.5px;
       text-transform: uppercase;
-      letter-spacing: 1.4px;
+      letter-spacing: 1.2px;
       color: var(--text-dim);
       line-height: 1;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
     }
     .stat-value {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       line-height: 1;
-    }
-
-    .topbar-right {
-      display: flex;
-      gap: 10px;
-      align-items: center;
     }
 
     .icon-btn {
@@ -402,8 +362,15 @@
 
     .primary-actions {
       display: flex;
-      gap: 12px;
-      margin-top: 18px;
+      gap: 10px;
+    }
+    .primary-actions .btn {
+      height: 38px;
+      box-sizing: border-box;
+      padding: 0 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .btn {
       padding: 11px 22px;
@@ -981,6 +948,21 @@
       .stage-frame { padding: 66px 50px; }
       .brand-text h1 { font-size: 13px; }
     }
+    
+    body.game-active .stat-card,
+    body.game-active .footer {
+      display: none !important;
+    }
+
+    body.game-active #startBtn {
+      background: rgba(248, 113, 113, 0.1);
+      border-color: rgba(248, 113, 113, 0.4);
+      color: var(--danger);
+      box-shadow: none;
+    }
+    body.game-active #startBtn:hover {
+      background: rgba(248, 113, 113, 0.2);
+    }
   </style>
 </head>
 <body>
@@ -988,22 +970,9 @@
 <div class="app">
   <!-- TOP BAR -->
   <header class="topbar">
-    <div class="brand">
-      <div class="brand-logo">R</div>
-      <div class="brand-text">
-        <h1>Relational N-Back</h1>
-        <p>Cognitive Training Console</p>
-      </div>
-    </div>
+    <button class="icon-btn settings-btn" title="Settings">⚙</button>
 
     <div class="stats">
-      <div class="stat-card">
-        <div class="stat-icon">◆</div>
-        <div>
-          <div class="stat-label">Trial</div>
-          <div class="stat-value"><span id="intervalCount">0</span></div>
-        </div>
-      </div>
       <div class="stat-card">
         <div class="stat-icon good">✓</div>
         <div>
@@ -1018,10 +987,9 @@
           <div class="stat-value"><span id="minutes">0</span>m</div>
         </div>
       </div>
-    </div>
-
-    <div class="topbar-right">
-      <button class="icon-btn settings-btn" title="Settings">⚙</button>
+      <div class="primary-actions">
+        <button class="btn primary" id="startBtn">▶ Play</button>
+      </div>
     </div>
   </header>
 
@@ -1047,19 +1015,7 @@
         </div>
       </div>
 
-      <div class="stage-info">
-        <div class="interval-pill idle" id="statusPill">
-          <span class="dot"></span>
-          <span id="statusText">Idle</span>
-        </div>
-      </div>
-
       <div id="feedbackToast" class="feedback-toast"></div>
-
-      <div class="primary-actions">
-        <button class="btn primary" id="startBtn">▶ Start Session</button>
-        <button class="btn danger" id="stopBtn">■ Stop</button>
-      </div>
     </div>
   </main>
 
@@ -1231,9 +1187,17 @@
       <label>N Value</label>
       <input type="number" id="nValue" value="2" min="1" />
     </div>
+    <div class="setting-group">
+      <label>Num Trials</label>
+      <input type="number" id="numTrials" value="35" min="10" />
+    </div>
     <label class="toggle-row">
-      <span class="tr-label"><span class="tr-icon">✓</span>Feedback</span>
+      <span class="tr-label"><span class="tr-icon">✓</span>Show Live Feedback</span>
       <input type="checkbox" id="feedbackOn">
+    </label>
+    <label class="toggle-row">
+      <span class="tr-label"><span class="tr-icon">⌖</span>Hide Response Console</span>
+      <input type="checkbox" id="hideResponseConsole">
     </label>
   </div>
 
@@ -1283,7 +1247,7 @@
   const gridCube = document.getElementById('gridCube');
   const cubeWrapper = document.getElementById('cubeWrapper');
 
-  const intervalCountEl = document.getElementById('intervalCount');
+  const intervalCountEl = document.getElementById('intervalCount') || { textContent: '' };
   const accuracyEl = document.getElementById('accuracy');
   const minutesEl = document.getElementById('minutes');
 
@@ -1293,7 +1257,10 @@
   const intervalMs = document.getElementById('intervalMs');
   const isiMs = document.getElementById('isiMs');
   const nValue = document.getElementById('nValue');
+  const numTrials = document.getElementById('numTrials');
   const feedbackOn = document.getElementById('feedbackOn');
+  const hideResponseConsole = document.getElementById('hideResponseConsole');
+  const responseConsole = document.querySelector('.dock-wrap');
 
   const directionalOn = document.getElementById('directionalOn');
   const soundOn = document.getElementById('soundOn');
@@ -1302,15 +1269,11 @@
   const sizeOn = document.getElementById('sizeOn');
 
   const startBtn = document.getElementById('startBtn');
-  const stopBtn = document.getElementById('stopBtn');
   const positionBtn = document.getElementById('positionBtn');
   const soundBtn = document.getElementById('soundBtn');
   const colorBtn = document.getElementById('colorBtn');
   const shapeBtn = document.getElementById('shapeBtn');
   const sizeBtn = document.getElementById('sizeBtn');
-
-  const statusPill = document.getElementById('statusPill');
-  const statusText = document.getElementById('statusText');
 
   const settingsPanel = document.getElementById('settingsPanel');
   const settingsBackdrop = document.getElementById('settingsBackdrop');
@@ -1327,6 +1290,7 @@
   let intervalCount = 0;
   let correct = 0;
   let total = 0;
+  let startGameTimeout = null;
 
   const responseLabels = {
     position: 'Position',
@@ -1385,16 +1349,6 @@
   cubeSize.onchange = applyCubeSize;
   rotationSpeed.oninput = e =>
     cubeWrapper.style.setProperty('--spin-speed', `${e.target.value}s`);
-
-  function setStatus(running) {
-    if (running) {
-      statusPill.classList.remove('idle');
-      statusText.textContent = 'Running';
-    } else {
-      statusPill.classList.add('idle');
-      statusText.textContent = 'Idle';
-    }
-  }
 
   function renderCharReference() {
     charReferenceGrid.innerHTML = '';
@@ -1520,6 +1474,12 @@
       updateAccuracy();
     }
 
+    const maxTrials = +numTrials.value;
+    if (maxTrials > 0 && intervalCount >= maxTrials) {
+      stopGame();
+      return;
+    }
+
     if (feedbackOn.checked && (missed.length || wrong.length)) {
       showFeedback(missed, wrong);
     } else {
@@ -1636,31 +1596,47 @@
   }
 
   startBtn.onclick = () => {
-    closeSettingsFn();
-    stopGame();
-    history = [];
-    expected.clear();
-    falseAlarms.clear();
-    hideFeedback();
-    intervalCount = correct = total = 0;
-    updateAccuracy();
-    intervalCountEl.textContent = '0';
-
-    if (shapeOn.checked) {
-      generateCharGrid();
-      renderCharReference();
-      showCharReference();
+    if (interval || startGameTimeout) {
+      stopGame();
     } else {
-      hideCharReference();
-    }
+      closeSettingsFn();
+      stopGame();
+      document.body.classList.add('game-active');
+      startBtn.innerHTML = '■ Stop';
+      history = [];
+      expected.clear();
+      falseAlarms.clear();
+      hideFeedback();
+      intervalCount = correct = total = 0;
+      updateAccuracy();
+      intervalCountEl.textContent = '0';
 
-    sessionStart = Date.now();
-    setStatus(true);
-    nextStimulus();
-    interval = setInterval(nextStimulus, +intervalMs.value);
+      if (shapeOn.checked) {
+        generateCharGrid();
+        renderCharReference();
+        showCharReference();
+      } else {
+        hideCharReference();
+      }
+
+      startGameTimeout = setTimeout(() => {
+        sessionStart = Date.now();
+        nextStimulus();
+        interval = setInterval(nextStimulus, +intervalMs.value);
+        startGameTimeout = null;
+      }, 500);
+    }
   };
 
   function stopGame() {
+    document.body.classList.remove('game-active');
+    startBtn.innerHTML = '▶ Play';
+
+    if (startGameTimeout) {
+      clearTimeout(startGameTimeout);
+      startGameTimeout = null;
+    }
+
     clearInterval(interval);
     interval = null;
     if (stimulusTimeout) {
@@ -1668,7 +1644,13 @@
       stimulusTimeout = null;
     }
     clearCells();
-    setStatus(false);
+
+    if (expected.size) {
+      total += expected.size;
+      expected.clear();
+      updateAccuracy();
+    }
+
     hideFeedback();
     hideCharReference();
     if (sessionStart) {
@@ -1678,8 +1660,6 @@
       saveMinutesToday();
     }
   }
-
-  stopBtn.onclick = stopGame;
 
   positionBtn.onclick = () => respond('position');
   soundBtn.onclick = () => respond('sound');
@@ -1726,18 +1706,20 @@
   // --- settings persistence (localStorage) ---
   const SETTINGS_KEY = 'nback-settings-v1';
   const persistedInputs = [
-    { el: cubeDimension, key: 'cubeDimension', prop: 'value' },
-    { el: cubeSize,      key: 'cubeSize',      prop: 'value' },
-    { el: rotationSpeed, key: 'rotationSpeed', prop: 'value' },
-    { el: intervalMs,    key: 'intervalMs',    prop: 'value' },
-    { el: isiMs,         key: 'isiMs',         prop: 'value' },
-    { el: nValue,        key: 'nValue',        prop: 'value' },
-    { el: feedbackOn,    key: 'feedbackOn',    prop: 'checked' },
-    { el: directionalOn, key: 'directionalOn', prop: 'checked' },
-    { el: soundOn,       key: 'soundOn',       prop: 'checked' },
-    { el: colorOn,       key: 'colorOn',       prop: 'checked' },
-    { el: shapeOn,       key: 'shapeOn',       prop: 'checked' },
-    { el: sizeOn,        key: 'sizeOn',        prop: 'checked' },
+    { el: cubeDimension,       key: 'cubeDimension',       prop: 'value' },
+    { el: cubeSize,            key: 'cubeSize',            prop: 'value' },
+    { el: rotationSpeed,       key: 'rotationSpeed',       prop: 'value' },
+    { el: intervalMs,          key: 'intervalMs',          prop: 'value' },
+    { el: isiMs,               key: 'isiMs',               prop: 'value' },
+    { el: nValue,              key: 'nValue',              prop: 'value' },
+    { el: numTrials,           key: 'numTrials',           prop: 'value' },
+    { el: feedbackOn,          key: 'feedbackOn',          prop: 'checked' },
+    { el: hideResponseConsole, key: 'hideResponseConsole', prop: 'checked' },
+    { el: directionalOn,       key: 'directionalOn',       prop: 'checked' },
+    { el: soundOn,             key: 'soundOn',             prop: 'checked' },
+    { el: colorOn,             key: 'colorOn',             prop: 'checked' },
+    { el: shapeOn,             key: 'shapeOn',             prop: 'checked' },
+    { el: sizeOn,              key: 'sizeOn',              prop: 'checked' },
   ];
 
   function saveSettings() {
@@ -1785,6 +1767,7 @@
   cubeWrapper.style.setProperty('--spin-speed', `${rotationSpeed.value}s`);
   document.documentElement.style.setProperty('--cube-size', `${cubeSize.value}px`);
   buildCube(+cubeDimension.value || 3);
+  updateResponseConsoleVisibility();
 
   // --- customizable keybinds ---
   const KEYBINDS_KEY = 'nback-keybinds-v1';
@@ -1991,6 +1974,16 @@
       stopGame();
     }
   });
+
+  function updateResponseConsoleVisibility() {
+    if (hideResponseConsole.checked) {
+      responseConsole.style.display = 'none';
+    } else {
+      responseConsole.style.display = '';
+    }
+  }
+
+  hideResponseConsole.addEventListener('change', updateResponseConsoleVisibility);
 </script>
 
 </body>
