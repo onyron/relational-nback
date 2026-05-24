@@ -984,6 +984,13 @@
           <div class="stat-value" id="accuracy">—</div>
         </div>
       </div>
+      <div class="stat-card" id="trialCard">
+        <div class="stat-icon">#</div>
+        <div>
+          <div class="stat-label">Trial</div>
+          <div class="stat-value" id="intervalCount">0</div>
+        </div>
+      </div>
       <div class="stat-card">
         <div class="stat-icon alt">⏱</div>
         <div>
@@ -1191,10 +1198,14 @@
       <label>Num Trials</label>
       <input type="number" id="numTrials" value="35" min="10" />
     </div>
-    <label class="toggle-row">
-      <span class="tr-label"><span class="tr-icon">✓</span>Feedback</span>
-      <input type="checkbox" id="feedbackOn">
-    </label>
+    <div class="setting-group">
+      <label>Feedback</label>
+      <select id="feedbackMode">
+        <option value="show">Show</option>
+        <option value="hide">Hide</option>
+        <option value="hideCounter">Hide counter only</option>
+      </select>
+    </div>
     <label class="toggle-row">
       <span class="tr-label"><span class="tr-icon">⌖</span>Hide Response Console</span>
       <input type="checkbox" id="hideResponseConsole">
@@ -1258,7 +1269,8 @@
   const isiMs = document.getElementById('isiMs');
   const nValue = document.getElementById('nValue');
   const numTrials = document.getElementById('numTrials');
-  const feedbackOn = document.getElementById('feedbackOn');
+  const feedbackMode = document.getElementById('feedbackMode');
+  const trialCard = document.getElementById('trialCard');
   const hideResponseConsole = document.getElementById('hideResponseConsole');
   const responseConsole = document.querySelector('.dock-wrap');
 
@@ -1367,6 +1379,16 @@
       }
     }
   }
+
+  function updateTrialCardVisibility() {
+    if (!trialCard) return;
+    if (feedbackMode.value === 'show') {
+      trialCard.style.setProperty('display', 'flex', 'important');
+    } else {
+      trialCard.style.setProperty('display', 'none', 'important');
+    }
+  }
+  feedbackMode.addEventListener('change', updateTrialCardVisibility);
 
   function showCharReference() { charReference.classList.add('visible'); }
   function hideCharReference() { charReference.classList.remove('visible'); }
@@ -1480,7 +1502,8 @@
       return;
     }
 
-    if (feedbackOn.checked && (missed.length || wrong.length)) {
+    const showFb = (feedbackMode.value === 'show' || feedbackMode.value === 'hideCounter');
+    if (showFb && (missed.length || wrong.length)) {
       showFeedback(missed, wrong);
     } else {
       hideFeedback();
@@ -1713,7 +1736,7 @@
     { el: isiMs,               key: 'isiMs',               prop: 'value' },
     { el: nValue,              key: 'nValue',              prop: 'value' },
     { el: numTrials,           key: 'numTrials',           prop: 'value' },
-    { el: feedbackOn,          key: 'feedbackOn',          prop: 'checked' },
+    { el: feedbackMode,        key: 'feedbackMode',        prop: 'value' },
     { el: hideResponseConsole, key: 'hideResponseConsole', prop: 'checked' },
     { el: directionalOn,       key: 'directionalOn',       prop: 'checked' },
     { el: soundOn,             key: 'soundOn',             prop: 'checked' },
@@ -1768,6 +1791,7 @@
   document.documentElement.style.setProperty('--cube-size', `${cubeSize.value}px`);
   buildCube(+cubeDimension.value || 3);
   updateResponseConsoleVisibility();
+  updateTrialCardVisibility();
 
   // --- customizable keybinds ---
   const KEYBINDS_KEY = 'nback-keybinds-v1';
