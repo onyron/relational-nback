@@ -1220,17 +1220,21 @@
   <div class="settings-section">
     <div class="settings-section-title">Training</div>
     <div class="setting-group">
-      <label>Stimulus Interval (ms)</label>
+      <label>Trial Duration (ms)</label>
       <input type="number" id="intervalMs" value="2500" min="500" />
     </div>
     <div class="setting-group">
-      <label>Stimulus Duration (ms)</label>
-      <input type="number" id="stimulusDurationMs" value="500" min="50" />
+      <label>Inter-Stimulus Interval (ISI) (ms)</label>
+      <input type="number" id="isiMs" value="350" min="50" />
     </div>
     <div class="setting-group">
       <label>N Value</label>
       <input type="number" id="nValue" value="2" min="1" />
     </div>
+    <label class="toggle-row">
+      <span class="tr-label"><span class="tr-icon">✓</span>Feedback</span>
+      <input type="checkbox" id="feedbackOn">
+    </label>
   </div>
 
   <div class="settings-section">
@@ -1287,8 +1291,9 @@
   const cubeSize = document.getElementById('cubeSize');
   const rotationSpeed = document.getElementById('rotationSpeed');
   const intervalMs = document.getElementById('intervalMs');
-  const stimulusDurationMs = document.getElementById('stimulusDurationMs');
+  const isiMs = document.getElementById('isiMs');
   const nValue = document.getElementById('nValue');
+  const feedbackOn = document.getElementById('feedbackOn');
 
   const directionalOn = document.getElementById('directionalOn');
   const soundOn = document.getElementById('soundOn');
@@ -1318,6 +1323,7 @@
   let expected = new Set();
   let falseAlarms = new Set();
   let interval = null;
+  let stimulusTimeout = null;
   let intervalCount = 0;
   let correct = 0;
   let total = 0;
@@ -1449,6 +1455,9 @@
   }
 
   function playTone(freq) {
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.frequency.value = freq;
@@ -1511,9 +1520,9 @@
       updateAccuracy();
     }
 
-    if (missed.length || wrong.length) {
+    if (feedbackOn.checked && (missed.length || wrong.length)) {
       showFeedback(missed, wrong);
-    } else if (intervalCount > 0) {
+    } else {
       hideFeedback();
     }
 
@@ -1554,11 +1563,13 @@
 
     history.push({ cell, sound, color, shape, size });
 
-    // Cap stimulus duration to not exceed stimulus interval
-    const duration = Math.min(+stimulusDurationMs.value, +intervalMs.value);
-    
-    // Start clearing timer
-    setTimeout(() => {
+    const duration = Math.max(50, +intervalMs.value - +isiMs.value);
+
+    if (stimulusTimeout) {
+      clearTimeout(stimulusTimeout);
+    }
+
+    stimulusTimeout = setTimeout(() => {
       if (interval) {
         clearCells();
       }
@@ -1625,6 +1636,7 @@
   }
 
   startBtn.onclick = () => {
+    closeSettingsFn();
     stopGame();
     history = [];
     expected.clear();
@@ -1651,6 +1663,10 @@
   function stopGame() {
     clearInterval(interval);
     interval = null;
+    if (stimulusTimeout) {
+      clearTimeout(stimulusTimeout);
+      stimulusTimeout = null;
+    }
     clearCells();
     setStatus(false);
     hideFeedback();
@@ -1714,8 +1730,9 @@
     { el: cubeSize,      key: 'cubeSize',      prop: 'value' },
     { el: rotationSpeed, key: 'rotationSpeed', prop: 'value' },
     { el: intervalMs,    key: 'intervalMs',    prop: 'value' },
-    { el: stimulusDurationMs, key: 'stimulusDurationMs', prop: 'value' },
+    { el: isiMs,         key: 'isiMs',         prop: 'value' },
     { el: nValue,        key: 'nValue',        prop: 'value' },
+    { el: feedbackOn,    key: 'feedbackOn',    prop: 'checked' },
     { el: directionalOn, key: 'directionalOn', prop: 'checked' },
     { el: soundOn,       key: 'soundOn',       prop: 'checked' },
     { el: colorOn,       key: 'colorOn',       prop: 'checked' },
@@ -1745,6 +1762,22 @@
   persistedInputs.forEach(s => {
     s.el.addEventListener('change', saveSettings);
     if (s.prop === 'value') s.el.addEventListener('input', saveSettings);
+  });
+
+  intervalMs.addEventListener('change', () => {
+    const maxIsi = +intervalMs.value - 100;
+    if (+isiMs.value > maxIsi) {
+      isiMs.value = Math.max(50, maxIsi);
+    }
+    saveSettings();
+  });
+
+  isiMs.addEventListener('change', () => {
+    const maxIsi = +intervalMs.value - 100;
+    if (+isiMs.value > maxIsi) {
+      isiMs.value = Math.max(50, maxIsi);
+    }
+    saveSettings();
   });
 
   loadSettings();
