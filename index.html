@@ -2,98 +2,242 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>3D N-Back Cube</title>
+  <title>Relational N-Back — Cognitive Training Console</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
     :root {
-      --bg: #0b0d10;
-      --panel: #141820;
-      --border-outer: rgba(180, 200, 255, 0.45);
-      --border-inner: rgba(180, 200, 255, 0.2);
-      --cell-fill: rgba(120, 140, 255, 0.1);
-      --cell-active: rgba(120, 200, 255, 0.6);
-      --text: #e6ebff;
-      --cube-size: 220px;
+      --bg-0: #05070c;
+      --bg-1: #0a0e18;
+      --bg-2: #101626;
+      --panel: #141a2a;
+      --panel-2: #1a2238;
+      --panel-hi: #232c4a;
+
+      --border-subtle: rgba(120, 150, 220, 0.12);
+      --border: rgba(120, 160, 230, 0.25);
+      --border-bright: rgba(140, 180, 255, 0.5);
+
+      --accent: #6ee7ff;
+      --accent-2: #a78bfa;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --danger: #f87171;
+
+      --position-c: #60a5fa;
+      --direction-c: #22d3ee;
+      --sound-c: #a78bfa;
+      --color-c: #f472b6;
+      --char-c: #34d399;
+      --size-c: #fbbf24;
+
+      --text: #e8edff;
+      --text-dim: #8a94b8;
+      --text-faint: #4a5478;
+
+      --cube-size: 240px;
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+      --shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 1px var(--border-subtle);
+      --shadow-lg: 0 10px 40px rgba(0,0,0,0.6);
+      --glow-accent: 0 0 24px rgba(110, 231, 255, 0.35);
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      background: radial-gradient(circle at top, #101420, var(--bg));
+      background:
+        radial-gradient(ellipse 1200px 800px at 70% -10%, rgba(110, 231, 255, 0.06), transparent),
+        radial-gradient(ellipse 800px 600px at 10% 110%, rgba(167, 139, 250, 0.08), transparent),
+        linear-gradient(180deg, var(--bg-1), var(--bg-0));
       color: var(--text);
-      font-family: system-ui, sans-serif;
-      height: 100vh;
-      overflow: hidden;
+      font-family: 'Inter', 'SF Pro Text', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
 
-    /* ---------- SETTINGS ---------- */
-    .settings-btn {
+    body::before {
+      content: '';
       position: fixed;
-      top: 16px;
-      left: 16px;
-      z-index: 30;
-      background: var(--panel);
-      border: 1px solid var(--border-outer);
-      color: var(--text);
-      padding: 8px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    .settings {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      width: 320px;
-      background: linear-gradient(180deg, #141820, #0f1218);
-      border-right: 1px solid var(--border-outer);
-      padding: 20px;
-      transform: translateX(-100%);
-      transition: transform 0.3s ease;
-      z-index: 29;
-      overflow-y: auto;
-    }
-
-    .settings.open { transform: translateX(0); }
-
-    .settings h2 { margin-top: 0; font-size: 18px; }
-
-    .setting-group { margin-bottom: 14px; }
-
-    label { display: block; margin-bottom: 6px; opacity: 0.85; }
-
-    select, input[type=number] {
-      width: 100%;
-      padding: 8px;
-      background: #0e121a;
-      color: var(--text);
-      border: 1px solid var(--border-inner);
-      border-radius: 6px;
-    }
-
-    /* ---------- HUD ---------- */
-    .hud {
-      position: fixed;
-      top: 16px;
-      right: 16px;
-      font-size: 14px;
-      text-align: right;
-      opacity: 0.9;
-      z-index: 10;
-    }
-
-    /* ---------- SCENE ---------- */
-    .scene {
-      position: absolute;
       inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4), transparent),
+        radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.3), transparent),
+        radial-gradient(1px 1px at 40% 60%, rgba(255,255,255,0.25), transparent),
+        radial-gradient(2px 2px at 85% 20%, rgba(110,231,255,0.3), transparent),
+        radial-gradient(1px 1px at 15% 85%, rgba(167,139,250,0.3), transparent);
+      background-size: 300px 300px, 400px 400px, 250px 250px, 500px 500px, 350px 350px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(rgba(120,160,230,0.025) 1px, transparent 1px) 0 0 / 60px 60px,
+        linear-gradient(90deg, rgba(120,160,230,0.025) 1px, transparent 1px) 0 0 / 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 100vh;
+    }
+
+    /* ---------- TOP BAR ---------- */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, rgba(20,26,42,0.85), rgba(20,26,42,0.45));
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      width: 38px; height: 38px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 18px;
+      color: #0a0e18;
+      box-shadow: var(--glow-accent);
+      position: relative;
+    }
+    .brand-logo::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 12px;
+      border: 1px solid rgba(110,231,255,0.3);
+      pointer-events: none;
+    }
+    .brand-text h1 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+    }
+    .brand-text p {
+      margin: 2px 0 0;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+    }
+
+    .stats {
+      display: flex;
+      gap: 10px;
+    }
+    .stat-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      min-width: 120px;
+      box-shadow: var(--shadow-sm);
+    }
+    .stat-icon {
+      width: 30px; height: 30px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      background: rgba(110,231,255,0.1);
+      border: 1px solid rgba(110,231,255,0.25);
+      color: var(--accent);
+    }
+    .stat-icon.alt { background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.25); color: var(--accent-2); }
+    .stat-icon.good { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.3); color: var(--success); }
+    .stat-label {
+      font-size: 9.5px;
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
+      color: var(--text-dim);
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+    .stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .topbar-right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .icon-btn {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      cursor: pointer;
+      display: grid; place-items: center;
+      font-size: 16px;
+      transition: all 0.15s;
+    }
+    .icon-btn:hover {
+      background: var(--panel-hi);
+      border-color: var(--border-bright);
+      transform: translateY(-1px);
+    }
+
+    /* ---------- MAIN ---------- */
+    .main {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 80px 24px 40px;
+    }
+
+    /* ---------- CUBE STAGE ---------- */
+    .stage {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+    }
+
+    .stage-frame {
+      position: relative;
+      padding: 90px 70px;
+    }
+
+    .scene {
       perspective: 1200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--cube-size);
+      height: var(--cube-size);
     }
 
     .cube-wrapper {
@@ -126,124 +270,1008 @@
       position: absolute;
       width: 100%;
       height: 100%;
-      background: var(--cell-fill);
-      border: 1px solid var(--border-inner);
+      background: rgba(120, 140, 255, 0.06);
+      border: 1px solid rgba(180, 200, 255, 0.22);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 28px;
+      font-weight: 700;
       color: var(--text);
       user-select: none;
+      transition: background 0.1s;
     }
 
-    .cell.active .cell-face { background: var(--cell-active); }
+    .cell.active .cell-face {
+      background: rgba(110, 231, 255, 0.6);
+      box-shadow: 0 0 10px rgba(110, 231, 255, 0.6), inset 0 0 8px rgba(255,255,255,0.3);
+    }
 
-    /* ---------- UI ---------- */
-    .ui {
-      margin-top: 28px;
+    /* ---------- AXES ---------- */
+    .axes {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      pointer-events: none;
+    }
+    .axis-line {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform-style: preserve-3d;
+    }
+    .axis-x {
+      width: calc(var(--cube-size) + 80px); height: 2px;
+      margin-left: calc((var(--cube-size) + 80px) / -2); margin-top: -1px;
+      background: linear-gradient(90deg, rgba(239,68,68,0.1), #ef4444, rgba(239,68,68,0.1));
+      box-shadow: 0 0 6px rgba(239,68,68,0.6);
+    }
+    .axis-y {
+      width: 2px; height: calc(var(--cube-size) + 80px);
+      margin-left: -1px; margin-top: calc((var(--cube-size) + 80px) / -2);
+      background: linear-gradient(180deg, rgba(34,197,94,0.1), #22c55e, rgba(34,197,94,0.1));
+      box-shadow: 0 0 6px rgba(34,197,94,0.6);
+    }
+    .axis-z {
+      width: calc(var(--cube-size) + 80px); height: 2px;
+      margin-left: calc((var(--cube-size) + 80px) / -2); margin-top: -1px;
+      background: linear-gradient(90deg, rgba(59,130,246,0.1), #3b82f6, rgba(59,130,246,0.1));
+      box-shadow: 0 0 6px rgba(59,130,246,0.6);
+      transform: rotateY(90deg);
+    }
+    .axis-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform-style: preserve-3d;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 7px;
+      border-radius: 5px;
+      letter-spacing: 1.2px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      white-space: nowrap;
+      line-height: 1;
+      backdrop-filter: blur(2px);
+    }
+    .axis-label.x {
+      color: #fecaca;
+      background: rgba(239,68,68,0.25);
+      border: 1px solid rgba(239,68,68,0.7);
+      box-shadow: 0 0 8px rgba(239,68,68,0.4);
+    }
+    .axis-label.y {
+      color: #bbf7d0;
+      background: rgba(34,197,94,0.25);
+      border: 1px solid rgba(34,197,94,0.7);
+      box-shadow: 0 0 8px rgba(34,197,94,0.4);
+    }
+    .axis-label.z {
+      color: #bfdbfe;
+      background: rgba(59,130,246,0.25);
+      border: 1px solid rgba(59,130,246,0.7);
+      box-shadow: 0 0 8px rgba(59,130,246,0.4);
+    }
+    .label-east  { transform: translate3d(calc(var(--cube-size) / 2 + 28px), 0, 0)    translate(-50%, -50%); }
+    .label-west  { transform: translate3d(calc(var(--cube-size) / -2 - 28px), 0, 0)   translate(-50%, -50%); }
+    .label-south { transform: translate3d(0, calc(var(--cube-size) / 2 + 28px), 0)    translate(-50%, -50%); }
+    .label-north { transform: translate3d(0, calc(var(--cube-size) / -2 - 28px), 0)   translate(-50%, -50%); }
+    .label-above { transform: translate3d(0, 0, calc(var(--cube-size) / 2 + 28px))    translate(-50%, -50%); }
+    .label-below { transform: translate3d(0, 0, calc(var(--cube-size) / -2 - 28px))   translate(-50%, -50%); }
+
+    .stage-info {
+      margin-top: 20px;
       display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
       flex-wrap: wrap;
-      gap: 10px;
-      z-index: 20;
+    }
+    .interval-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+    .interval-pill .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .interval-pill.idle .dot {
+      background: var(--text-faint);
+      box-shadow: none;
+      animation: none;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
     }
 
-    .ui button {
-      padding: 8px 12px;
+    .primary-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .btn {
+      padding: 11px 22px;
       background: var(--panel);
-      border: 1px solid var(--border-outer);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .btn:hover { background: var(--panel-hi); transform: translateY(-1px); }
+    .btn.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #0a0e18;
+      border-color: transparent;
+      box-shadow: var(--glow-accent);
+    }
+    .btn.primary:hover { filter: brightness(1.1); }
+    .btn.danger {
+      background: rgba(248,113,113,0.1);
+      border-color: rgba(248,113,113,0.4);
+      color: var(--danger);
+    }
+    .btn.danger:hover { background: rgba(248,113,113,0.2); }
+
+    /* ---------- RESPONSE DOCK ---------- */
+    .dock-wrap {
+      padding: 8px 24px 24px;
+    }
+    .dock-title {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .dock-title::before, .dock-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border));
+    }
+    .dock-title::after {
+      background: linear-gradient(90deg, var(--border), transparent);
+    }
+
+    .dock {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 14px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--panel-accent, var(--accent));
+      opacity: 0.8;
+    }
+    .panel.pos { --panel-accent: var(--position-c); }
+    .panel.dir { --panel-accent: var(--direction-c); }
+    .panel.snd { --panel-accent: var(--sound-c); }
+    .panel.col { --panel-accent: var(--color-c); }
+    .panel.chr { --panel-accent: var(--char-c); }
+    .panel.siz { --panel-accent: var(--size-c); }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.6px;
+      color: var(--text);
+      font-weight: 700;
+    }
+    .panel-title .bullet {
+      width: 8px; height: 8px;
+      border-radius: 2px;
+      background: var(--panel-accent, var(--accent));
+      box-shadow: 0 0 8px var(--panel-accent, var(--accent));
+    }
+    .panel-hotkey {
+      font-size: 10px;
+      color: var(--text-faint);
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      padding: 2px 6px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+
+    .response-btn {
+      padding: 10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-subtle);
       color: var(--text);
       border-radius: 8px;
       cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.12s;
+      min-height: 48px;
+      font-family: inherit;
+    }
+    .response-btn:hover {
+      background: rgba(255,255,255,0.05);
+      border-color: var(--panel-accent, var(--border));
+      transform: translateY(-1px);
+    }
+    .response-btn:active,
+    .response-btn.key-active {
+      transform: translateY(0);
+      background: var(--panel-accent, var(--accent));
+      color: #0a0e18;
+      border-color: var(--panel-accent, var(--accent));
+    }
+    .response-btn .ico {
+      font-size: 18px;
+      line-height: 1;
+    }
+    .response-btn .lbl {
+      font-size: 9.5px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .response-btn.big {
+      min-height: 78px;
+      font-size: 13px;
+    }
+    .response-btn.big .ico { font-size: 28px; }
+
+    .grid-1 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .compass {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: auto auto auto;
+      gap: 6px;
+    }
+    .compass .c-n { grid-column: 2; grid-row: 1; }
+    .compass .c-w { grid-column: 1; grid-row: 2; }
+    .compass .c-s { grid-column: 2; grid-row: 3; }
+    .compass .c-e { grid-column: 3; grid-row: 2; }
+    .compass .c-up { grid-column: 1; grid-row: 1; }
+    .compass .c-dn { grid-column: 3; grid-row: 3; }
+    .compass .c-mid {
+      grid-column: 2; grid-row: 2;
+      display: grid;
+      place-items: center;
+      font-size: 9px;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+    }
+
+    /* ---------- SETTINGS DRAWER ---------- */
+    .settings {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: min(360px, 100vw);
+      background: linear-gradient(180deg, var(--panel), var(--bg-2));
+      border-right: 1px solid var(--border-bright);
+      padding: 24px;
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 40;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+    }
+    .settings.open { transform: translateX(0); }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .settings-header h2 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .settings-section {
+      margin-bottom: 22px;
+    }
+    .settings-section-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.8px;
+      color: var(--accent);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+    }
+    .settings-section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border), transparent);
+    }
+
+    .setting-group { margin-bottom: 12px; }
+    .setting-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 10.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-weight: 600;
+    }
+    select, input[type=number] {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    select:focus, input[type=number]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(110, 231, 255, 0.15);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .toggle-row:hover { background: rgba(255,255,255,0.05); }
+    .toggle-row .tr-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .toggle-row .tr-icon {
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      display: grid; place-items: center;
+      font-size: 13px;
+      background: rgba(110,231,255,0.08);
+      border: 1px solid rgba(110,231,255,0.2);
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .toggle-row input[type="checkbox"] {
+      appearance: none;
+      width: 38px; height: 22px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin: 0;
+    }
+    .toggle-row input[type="checkbox"]::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      transition: all 0.2s;
+    }
+    .toggle-row input[type="checkbox"]:checked {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-color: transparent;
+    }
+    .toggle-row input[type="checkbox"]:checked::after {
+      left: 18px;
+      background: #0a0e18;
+    }
+
+    .settings-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(2px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 35;
+    }
+    .settings-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ---------- KEYBIND SETTINGS ---------- */
+    .kb-subgroup-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      margin: 10px 0 6px;
+      font-weight: 600;
+    }
+    .keybind-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      margin-bottom: 4px;
+    }
+    .keybind-row .kb-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .keybind-row .kb-key {
+      min-width: 48px;
+      padding: 4px 10px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      line-height: 1.4;
+    }
+    .keybind-row .kb-key:hover {
+      border-color: var(--accent);
+    }
+    .keybind-row .kb-key.listening {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(110, 231, 255, 0.2);
+      color: var(--accent);
+      animation: kb-pulse 1s infinite;
+    }
+    @keyframes kb-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .keybind-row .kb-key.conflict {
+      border-color: #ff6b6b;
+      color: #ff6b6b;
+    }
+    .kb-reset-btn {
+      width: 100%;
+      padding: 8px;
+      margin-top: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 11px;
+      font-family: inherit;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .kb-reset-btn:hover {
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      border-color: var(--border-bright);
+    }
+
+    /* ---------- CHARACTER REFERENCE PANEL ---------- */
+    .char-ref {
+      position: fixed;
+      right: 20px;
+      top: 90px;
+      width: 210px;
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      z-index: 15;
+      display: none;
+      overflow: hidden;
+    }
+    .char-ref.visible { display: block; }
+    .char-ref::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--char-c);
+      opacity: 0.85;
+    }
+    .char-ref-header {
+      margin-bottom: 10px;
+    }
+    .char-ref-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 6px;
+      position: relative;
+    }
+    .char-ref-cell {
+      padding: 14px 8px;
+      background: rgba(52, 211, 153, 0.08);
+      border: 1px solid rgba(52, 211, 153, 0.4);
+      border-radius: 8px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      letter-spacing: 0.5px;
+      color: #d1fae5;
+    }
+    .char-ref-axis {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 8px;
+      padding: 0 2px;
+    }
+    .char-ref-legend {
+      margin-top: 10px;
+      font-size: 9px;
+      color: var(--text-faint);
+      text-align: center;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1180px) {
+      .char-ref {
+        position: static;
+        width: auto;
+        margin: 0 24px 16px;
+      }
+    }
+    @media (max-width: 600px) {
+      .char-ref { margin: 0 14px 16px; }
+    }
+
+    /* ---------- FEEDBACK TOAST ---------- */
+    .feedback-toast {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: rgba(20, 26, 42, 0.92);
+      border: 1px solid var(--border-subtle);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      max-width: 420px;
+      margin: 0 auto;
+      animation: feedbackIn 0.2s ease-out;
+    }
+    .feedback-toast.visible { display: flex; }
+    .feedback-toast .fb-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .feedback-toast .fb-missed {
+      color: var(--danger);
+    }
+    .feedback-toast .fb-wrong {
+      color: var(--warning);
+    }
+    .feedback-toast .fb-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      min-width: 52px;
+    }
+    .feedback-toast .fb-items {
+      color: var(--text-dim);
+    }
+    @keyframes feedbackIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ---------- FOOTER ---------- */
+    .footer {
+      padding: 14px 24px 18px;
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+    .footer span { color: var(--text-dim); }
+
+    @media (max-width: 900px) {
+      .dock { grid-template-columns: repeat(2, 1fr); }
+      .stats { display: none; }
+      .brand-text p { display: none; }
+    }
+    @media (max-width: 600px) {
+      :root { --cube-size: 200px; }
+      .dock { grid-template-columns: 1fr; }
+      .dock-wrap { padding: 0 14px 20px; }
+      .main { padding: 40px 14px 20px; }
+      .stage-frame { padding: 76px 58px; }
+      .topbar { padding: 12px 14px; }
+      .response-btn .lbl { font-size: 10px; }
+      .primary-actions { flex-wrap: wrap; justify-content: center; }
+      .char-intro-inner { padding: 20px; }
+      #characterGrid > div { padding: 20px 28px; font-size: 22px; }
+    }
+    @media (max-width: 380px) {
+      :root { --cube-size: 170px; }
+      .stage-frame { padding: 66px 50px; }
+      .brand-text h1 { font-size: 13px; }
     }
   </style>
 </head>
 <body>
 
-<button class="settings-btn">⚙ Settings</button>
+<div class="app">
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">R</div>
+      <div class="brand-text">
+        <h1>Relational N-Back</h1>
+        <p>Cognitive Training Console</p>
+      </div>
+    </div>
 
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-icon">◆</div>
+        <div>
+          <div class="stat-label">Trial</div>
+          <div class="stat-value"><span id="intervalCount">0</span></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon good">✓</div>
+        <div>
+          <div class="stat-label">Accuracy</div>
+          <div class="stat-value" id="accuracy">—</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon alt">⏱</div>
+        <div>
+          <div class="stat-label">Today</div>
+          <div class="stat-value"><span id="minutes">0</span>m</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <button class="icon-btn settings-btn" title="Settings">⚙</button>
+    </div>
+  </header>
+
+  <!-- STAGE -->
+  <main class="main">
+    <div class="stage">
+      <div class="stage-frame">
+        <div class="scene">
+          <div class="cube-wrapper" id="cubeWrapper" style="--spin-speed:18s">
+            <div class="axes">
+              <div class="axis-line axis-x"></div>
+              <div class="axis-line axis-y"></div>
+              <div class="axis-line axis-z"></div>
+              <div class="axis-label x label-east">E+</div>
+              <div class="axis-label x label-west">W−</div>
+              <div class="axis-label y label-south">S+</div>
+              <div class="axis-label y label-north">N−</div>
+              <div class="axis-label z label-above">A+</div>
+              <div class="axis-label z label-below">B−</div>
+            </div>
+            <div class="grid-cube" id="gridCube"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage-info">
+        <div class="interval-pill idle" id="statusPill">
+          <span class="dot"></span>
+          <span id="statusText">Idle</span>
+        </div>
+      </div>
+
+      <div id="feedbackToast" class="feedback-toast"></div>
+
+      <div class="primary-actions">
+        <button class="btn primary" id="startBtn">▶ Start Session</button>
+        <button class="btn danger" id="stopBtn">■ Stop</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- RESPONSE DOCK -->
+  <section class="dock-wrap">
+    <div class="dock-title">Response Console</div>
+    <div class="dock">
+
+      <div class="panel pos">
+        <div class="panel-header">
+          <div class="panel-title"><span class="bullet"></span>Position</div>
+          <span class="panel-hotkey">A</span>
+        </div>
+        <div class="grid-1">
+          <button class="response-btn big" id="positionBtn">
+            <span class="ico">⌖</span>
+            <span>Position Match</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel dir">
+        <div class="panel-header">
+          <div class="panel-title"><span class="bullet"></span>Direction</div>
+          <span class="panel-hotkey">← ↑ ↓ → PgUp PgDn</span>
+        </div>
+        <div class="compass">
+          <button class="response-btn c-n" data-dir="north">
+            <span class="ico">↑</span><span class="lbl">North</span>
+          </button>
+          <button class="response-btn c-w" data-dir="west">
+            <span class="ico">←</span><span class="lbl">West</span>
+          </button>
+          <div class="c-mid">Move</div>
+          <button class="response-btn c-e" data-dir="east">
+            <span class="ico">→</span><span class="lbl">East</span>
+          </button>
+          <button class="response-btn c-s" data-dir="south">
+            <span class="ico">↓</span><span class="lbl">South</span>
+          </button>
+          <button class="response-btn c-up" data-dir="above">
+            <span class="ico">▲</span><span class="lbl">Above</span>
+          </button>
+          <button class="response-btn c-dn" data-dir="below">
+            <span class="ico">▼</span><span class="lbl">Below</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel snd">
+        <div class="panel-header">
+          <div class="panel-title"><span class="bullet"></span>Sound</div>
+          <span class="panel-hotkey">S</span>
+        </div>
+        <div class="grid-1">
+          <button class="response-btn big" id="soundBtn">
+            <span class="ico">♪</span>
+            <span>Sound Match</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel col">
+        <div class="panel-header">
+          <div class="panel-title"><span class="bullet"></span>Color</div>
+          <span class="panel-hotkey">D</span>
+        </div>
+        <div class="grid-1">
+          <button class="response-btn big" id="colorBtn">
+            <span class="ico">●</span>
+            <span>Color Match</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel chr">
+        <div class="panel-header">
+          <div class="panel-title"><span class="bullet"></span>Character</div>
+          <span class="panel-hotkey">F · I J K L U O</span>
+        </div>
+        <div class="grid-1" style="margin-bottom: 8px;">
+          <button class="response-btn" id="shapeBtn">
+            <span class="ico">A</span>
+            <span>Glyph Match</span>
+          </button>
+        </div>
+        <div class="compass">
+          <button class="response-btn c-n" data-char="char-north">
+            <span class="ico">↑</span><span class="lbl">Up</span>
+          </button>
+          <button class="response-btn c-w" data-char="char-west">
+            <span class="ico">←</span><span class="lbl">Left</span>
+          </button>
+          <div class="c-mid">Grid</div>
+          <button class="response-btn c-e" data-char="char-east">
+            <span class="ico">→</span><span class="lbl">Right</span>
+          </button>
+          <button class="response-btn c-s" data-char="char-south">
+            <span class="ico">↓</span><span class="lbl">Down</span>
+          </button>
+          <button class="response-btn c-up" data-char="char-higher">
+            <span class="ico">+</span><span class="lbl">Higher</span>
+          </button>
+          <button class="response-btn c-dn" data-char="char-lower">
+            <span class="ico">−</span><span class="lbl">Lower</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel siz">
+        <div class="panel-header">
+          <div class="panel-title"><span class="bullet"></span>Size</div>
+          <span class="panel-hotkey">G</span>
+        </div>
+        <div class="grid-1">
+          <button class="response-btn big" id="sizeBtn">
+            <span class="ico">⬚</span>
+            <span>Size Match</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>Relational N-Back</span> · Relational Working Memory Training
+  </footer>
+</div>
+
+<!-- SETTINGS -->
+<div class="settings-backdrop" id="settingsBackdrop"></div>
 <aside class="settings" id="settingsPanel">
-  <h2>Settings</h2>
-
-  <div class="setting-group">
-    <label>Cube Dimension</label>
-    <select id="cubeDimension">
-      <option value="3">3 × 3 × 3</option>
-      <option value="4">4 × 4 × 4</option>
-    </select>
+  <div class="settings-header">
+    <h2>Session Setup</h2>
+    <button class="icon-btn" id="closeSettings" title="Close">×</button>
   </div>
 
-  <div class="setting-group">
-    <label>Rotation Speed (seconds)</label>
-    <input type="number" id="rotationSpeed" value="18" min="5" />
+  <div class="settings-section">
+    <div class="settings-section-title">Cube</div>
+    <div class="setting-group">
+      <label>Dimension</label>
+      <select id="cubeDimension">
+        <option value="3">3 × 3 × 3</option>
+        <option value="4">4 × 4 × 4</option>
+      </select>
+    </div>
+    <div class="setting-group">
+      <label>Cube Size (px)</label>
+      <input type="number" id="cubeSize" value="240" min="80" max="800" step="10" />
+    </div>
+    <div class="setting-group">
+      <label>Rotation (seconds)</label>
+      <input type="number" id="rotationSpeed" value="18" min="5" />
+    </div>
   </div>
 
-  <div class="setting-group">
-    <label>Stimulus Interval (ms)</label>
-    <input type="number" id="intervalMs" value="2500" min="500" />
+  <div class="settings-section">
+    <div class="settings-section-title">Training</div>
+    <div class="setting-group">
+      <label>Stimulus Interval (ms)</label>
+      <input type="number" id="intervalMs" value="2500" min="500" />
+    </div>
+    <div class="setting-group">
+      <label>Stimulus Duration (ms)</label>
+      <input type="number" id="stimulusDurationMs" value="500" min="50" />
+    </div>
+    <div class="setting-group">
+      <label>N Value</label>
+      <input type="number" id="nValue" value="2" min="1" />
+    </div>
   </div>
 
-  <div class="setting-group">
-    <label>N Value</label>
-    <input type="number" id="nValue" value="2" min="1" />
+  <div class="settings-section">
+    <div class="settings-section-title">Modalities</div>
+
+    <label class="toggle-row">
+      <span class="tr-label"><span class="tr-icon">→</span>Directional</span>
+      <input type="checkbox" id="directionalOn">
+    </label>
+    <label class="toggle-row">
+      <span class="tr-label"><span class="tr-icon">♪</span>Sound</span>
+      <input type="checkbox" id="soundOn">
+    </label>
+    <label class="toggle-row">
+      <span class="tr-label"><span class="tr-icon">●</span>Color</span>
+      <input type="checkbox" id="colorOn">
+    </label>
+    <label class="toggle-row">
+      <span class="tr-label"><span class="tr-icon">A</span>Character</span>
+      <input type="checkbox" id="shapeOn">
+    </label>
+    <label class="toggle-row">
+      <span class="tr-label"><span class="tr-icon">⬚</span>Size</span>
+      <input type="checkbox" id="sizeOn">
+    </label>
   </div>
 
-  <div class="setting-group"><label><input type="checkbox" id="directionalOn"> Directional</label></div>
-  <div class="setting-group"><label><input type="checkbox" id="soundOn"> Sound</label></div>
-  <div class="setting-group"><label><input type="checkbox" id="colorOn"> Color</label></div>
-  <div class="setting-group"><label><input type="checkbox" id="shapeOn"> Shape</label></div>
-  <div class="setting-group"><label><input type="checkbox" id="sizeOn"> Size</label></div>
+  <div class="settings-section">
+    <div class="settings-section-title">Keybinds</div>
+    <div id="keybindSettings"></div>
+    <button class="kb-reset-btn" id="resetKeybinds">Reset to Defaults</button>
+  </div>
 </aside>
 
-<div class="hud">
-  <div>Interval: <span id="intervalCount">0</span></div>
-  <div>Accuracy: <span id="accuracy">—</span></div>
-  <div>Today: <span id="minutes">0</span> min</div>
-</div>
-
-<main class="scene">
-    <div id="characterIntro"
-     style="position:fixed;inset:0;display:none;
-            align-items:center;justify-content:center;
-            background:rgba(0,0,0,0.6);z-index:50;">
-  <div id="characterGrid"
-       style="display:grid;
-              grid-template-columns:1fr 1fr;
-              grid-template-rows:1fr 1fr;
-              gap:14px;
-              padding:22px;
-              background:#141820;
-              border:1px solid rgba(180,200,255,0.45);
-              border-radius:12px;
-              font-size:26px;
-              text-align:center;">
+<!-- CHARACTER REFERENCE PANEL -->
+<aside class="char-ref" id="charReference">
+  <div class="char-ref-header">
+    <div class="panel-title"><span class="bullet" style="background:var(--char-c);box-shadow:0 0 8px var(--char-c);"></span>Set Layout</div>
   </div>
-</div>
-  <div class="cube-wrapper" id="cubeWrapper" style="--spin-speed:18s">
-    <div class="grid-cube" id="gridCube"></div>
-  </div>
-
-  <div class="ui">
-    <button id="startBtn">Start</button>
-    <button id="stopBtn">Stop</button>
-    <button id="positionBtn">Position</button>
-    <button data-dir="north">North</button>
-    <button data-dir="south">South</button>
-    <button data-dir="east">East</button>
-    <button data-dir="west">West</button>
-    <button data-dir="above">Above</button>
-    <button data-dir="below">Below</button>
-    <button id="soundBtn">Sound</button>
-    <button id="colorBtn">Color</button>
-    <button id="shapeBtn">Char</button>
-    <button data-char="char-north">C↑</button>
-    <button data-char="char-south">C↓</button>
-    <button data-char="char-east">C→</button>
-    <button data-char="char-west">C←</button>
-    <button data-char="char-higher">C+</button>
-    <button data-char="char-lower">C−</button>
-    <button id="sizeBtn">Size</button>
-  </div>
-</main>
+  <div class="char-ref-grid" id="charReferenceGrid"></div>
+  <div class="char-ref-axis"><span>← Left</span><span>Right →</span></div>
+  <div class="char-ref-legend">Sets ↑Up / ↓Down · ←L / R→</div>
+</aside>
 
 <script>
   const gridCube = document.getElementById('gridCube');
@@ -254,8 +1282,10 @@
   const minutesEl = document.getElementById('minutes');
 
   const cubeDimension = document.getElementById('cubeDimension');
+  const cubeSize = document.getElementById('cubeSize');
   const rotationSpeed = document.getElementById('rotationSpeed');
   const intervalMs = document.getElementById('intervalMs');
+  const stimulusDurationMs = document.getElementById('stimulusDurationMs');
   const nValue = document.getElementById('nValue');
 
   const directionalOn = document.getElementById('directionalOn');
@@ -272,24 +1302,42 @@
   const shapeBtn = document.getElementById('shapeBtn');
   const sizeBtn = document.getElementById('sizeBtn');
 
+  const statusPill = document.getElementById('statusPill');
+  const statusText = document.getElementById('statusText');
+
+  const settingsPanel = document.getElementById('settingsPanel');
+  const settingsBackdrop = document.getElementById('settingsBackdrop');
+  const closeSettings = document.getElementById('closeSettings');
+
+  const feedbackToast = document.getElementById('feedbackToast');
+
   let cells = [];
   let history = [];
   let expected = new Set();
+  let falseAlarms = new Set();
   let interval = null;
   let intervalCount = 0;
   let correct = 0;
   let total = 0;
 
-  // time tracking (today)
+  const responseLabels = {
+    position: 'Position',
+    north: 'North', south: 'South', east: 'East', west: 'West',
+    above: 'Above', below: 'Below',
+    sound: 'Sound', color: 'Color', shape: 'Glyph',
+    'char-north': 'Char ↑', 'char-south': 'Char ↓',
+    'char-east': 'Char →', 'char-west': 'Char ←',
+    'char-higher': 'Char +', 'char-lower': 'Char −',
+    size: 'Size'
+  };
+
   let sessionStart = null;
   let minutesToday = 0;
 
-  // stimuli pools
   const sounds = [220, 330, 440, 550];
   const colors = ['#ff6b6b', '#4dabf7', '#51cf66', '#fcc419'];
   const sizes = [18, 24, 32, 40];
 
-  // character stimulus sets (REPLACES old shapes[] completely)
   const charSets = {
     123: ['1','2','3','4','5'],
     ABC:   ['A','B','C','D','E'],
@@ -297,47 +1345,69 @@
     IV:   ['I','II','III','IV','V']
   };
   const characterSetKeys = Object.keys(charSets);
-let characterGridLayout = {};
-
-  // 2x2 character-set layout (generated on start)
   let charGridLayout = null;
+
+  const charReference = document.getElementById('charReference');
+  const charReferenceGrid = document.getElementById('charReferenceGrid');
 
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-  document.querySelector('.settings-btn').onclick = () =>
-    document.getElementById('settingsPanel').classList.toggle('open');
+  function openSettings() {
+    settingsPanel.classList.add('open');
+    settingsBackdrop.classList.add('open');
+  }
+  function closeSettingsFn() {
+    settingsPanel.classList.remove('open');
+    settingsBackdrop.classList.remove('open');
+  }
+  document.querySelector('.settings-btn').onclick = openSettings;
+  settingsBackdrop.onclick = closeSettingsFn;
+  closeSettings.onclick = closeSettingsFn;
 
   cubeDimension.onchange = e => buildCube(+e.target.value);
+
+  function applyCubeSize() {
+    let px = parseInt(cubeSize.value, 10);
+    if (!Number.isFinite(px) || px < 80) px = 80;
+    if (px > 800) px = 800;
+    document.documentElement.style.setProperty('--cube-size', `${px}px`);
+    buildCube(+cubeDimension.value || 3);
+  }
+  cubeSize.oninput = applyCubeSize;
+  cubeSize.onchange = applyCubeSize;
   rotationSpeed.oninput = e =>
     cubeWrapper.style.setProperty('--spin-speed', `${e.target.value}s`);
 
-function showCharacterIntro() {
-  if (!shapeOn.checked) return;
+  function setStatus(running) {
+    if (running) {
+      statusPill.classList.remove('idle');
+      statusText.textContent = 'Running';
+    } else {
+      statusPill.classList.add('idle');
+      statusText.textContent = 'Idle';
+    }
+  }
 
-  const intro = document.getElementById('characterIntro');
-  const grid = document.getElementById('characterGrid');
+  function renderCharReference() {
+    charReferenceGrid.innerHTML = '';
+    if (!charGridLayout) return;
+    // place sets in the 2x2 grid by their (x, y) position
+    const cells = [[null, null], [null, null]];
+    Object.entries(charGridLayout).forEach(([setKey, pos]) => {
+      cells[pos.y][pos.x] = setKey;
+    });
+    for (let y = 0; y < 2; y++) {
+      for (let x = 0; x < 2; x++) {
+        const cell = document.createElement('div');
+        cell.className = 'char-ref-cell';
+        cell.textContent = cells[y][x] || '';
+        charReferenceGrid.appendChild(cell);
+      }
+    }
+  }
 
-  grid.innerHTML = '';
-  characterGridLayout = {};
-
-  const shuffled = [...characterSetKeys].sort(() => Math.random() - 0.5);
-
-  shuffled.forEach((key, i) => {
-    characterGridLayout[key] = {
-      x: i % 2,
-      y: Math.floor(i / 2)
-    };
-
-    const cell = document.createElement('div');
-    cell.textContent = key.toUpperCase();
-    cell.style.padding = '14px';
-    cell.style.border = '1px solid rgba(180,200,255,0.25)';
-    grid.appendChild(cell);
-  });
-
-  intro.style.display = 'flex';
-  setTimeout(() => intro.style.display = 'none', 2000);
-}
+  function showCharReference() { charReference.classList.add('visible'); }
+  function hideCharReference() { charReference.classList.remove('visible'); }
 
   function buildCube(n) {
     gridCube.innerHTML = '';
@@ -345,6 +1415,9 @@ function showCharacterIntro() {
     const size = gridCube.clientWidth;
     const cellSize = size / n;
     const offset = (n - 1) / 2;
+    // shift so the cube's visual center aligns with the grid-cube's center
+    // (cells are position:absolute at top:0/left:0 so their top-left — not center — starts at the translate point)
+    const shift = size / 2 - cellSize / 2;
 
     for (let x = 0; x < n; x++)
       for (let y = 0; y < n; y++)
@@ -352,7 +1425,7 @@ function showCharacterIntro() {
           const cell = document.createElement('div');
           cell.className = 'cell';
           cell.style.width = cell.style.height = `${cellSize}px`;
-          cell.style.transform = `translate3d(${(x-offset)*cellSize}px, ${(y-offset)*cellSize}px, ${(z-offset)*cellSize}px)`;
+          cell.style.transform = `translate3d(${(x-offset)*cellSize + shift}px, ${(y-offset)*cellSize + shift}px, ${(z-offset)*cellSize}px)`;
           cell.dataset.x = x; cell.dataset.y = y; cell.dataset.z = z;
           createFaces(cell, cellSize);
           gridCube.appendChild(cell);
@@ -405,13 +1478,44 @@ function showCharacterIntro() {
         .forEach((s,i) => { charGridLayout[s] = positions[i]; });
   }
 
+  function showFeedback(missed, wrong) {
+    feedbackToast.innerHTML = '';
+    if (missed.length) {
+      const line = document.createElement('div');
+      line.className = 'fb-line fb-missed';
+      line.innerHTML = `<span class="fb-label">Missed</span><span class="fb-items">${missed.map(m => responseLabels[m] || m).join(', ')}</span>`;
+      feedbackToast.appendChild(line);
+    }
+    if (wrong.length) {
+      const line = document.createElement('div');
+      line.className = 'fb-line fb-wrong';
+      line.innerHTML = `<span class="fb-label">Wrong</span><span class="fb-items">${wrong.map(m => responseLabels[m] || m).join(', ')}</span>`;
+      feedbackToast.appendChild(line);
+    }
+    feedbackToast.classList.add('visible');
+  }
+
+  function hideFeedback() {
+    feedbackToast.classList.remove('visible');
+  }
+
   function nextStimulus() {
+    const missed = [...expected];
+    const wrong = [...falseAlarms];
+
     if (expected.size) {
       total += expected.size;
       expected.clear();
       updateAccuracy();
     }
 
+    if (missed.length || wrong.length) {
+      showFeedback(missed, wrong);
+    } else if (intervalCount > 0) {
+      hideFeedback();
+    }
+
+    falseAlarms.clear();
     clearCells();
 
     const cell = cells[Math.floor(Math.random()*cells.length)];
@@ -447,6 +1551,16 @@ function showCharacterIntro() {
     }
 
     history.push({ cell, sound, color, shape, size });
+
+    // Cap stimulus duration to not exceed stimulus interval
+    const duration = Math.min(+stimulusDurationMs.value, +intervalMs.value);
+    
+    // Start clearing timer
+    setTimeout(() => {
+      if (interval) {
+        clearCells();
+      }
+    }, duration);
 
     const n = +nValue.value;
     if (history.length > n) {
@@ -502,21 +1616,32 @@ function showCharacterIntro() {
     if (expected.has(type)) {
       correct++;
       expected.delete(type);
+    } else {
+      falseAlarms.add(type);
     }
     updateAccuracy();
   }
 
   startBtn.onclick = () => {
-  showCharacterIntro();
     stopGame();
     history = [];
     expected.clear();
+    falseAlarms.clear();
+    hideFeedback();
     intervalCount = correct = total = 0;
     updateAccuracy();
+    intervalCountEl.textContent = '0';
 
-    if (shapeOn.checked) generateCharGrid();
+    if (shapeOn.checked) {
+      generateCharGrid();
+      renderCharReference();
+      showCharReference();
+    } else {
+      hideCharReference();
+    }
 
     sessionStart = Date.now();
+    setStatus(true);
     nextStimulus();
     interval = setInterval(nextStimulus, +intervalMs.value);
   };
@@ -525,10 +1650,14 @@ function showCharacterIntro() {
     clearInterval(interval);
     interval = null;
     clearCells();
+    setStatus(false);
+    hideFeedback();
+    hideCharReference();
     if (sessionStart) {
       minutesToday += (Date.now() - sessionStart) / 60000;
       sessionStart = null;
       minutesEl.textContent = Math.floor(minutesToday);
+      saveMinutesToday();
     }
   }
 
@@ -546,7 +1675,287 @@ function showCharacterIntro() {
   document.querySelectorAll('[data-char]')
     .forEach(b => b.onclick = () => respond(b.dataset.char));
 
-  buildCube(3);
+  // --- persistent training time (today's tracking) ---
+  function getTodayDateString() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function saveMinutesToday() {
+    try {
+      localStorage.setItem('nback-minutes-today', minutesToday.toString());
+      localStorage.setItem('nback-minutes-date', getTodayDateString());
+    } catch (e) {}
+  }
+
+  function loadMinutesToday() {
+    try {
+      const savedDate = localStorage.getItem('nback-minutes-date');
+      const todayDate = getTodayDateString();
+      if (savedDate === todayDate) {
+        const savedMinutes = localStorage.getItem('nback-minutes-today');
+        if (savedMinutes) {
+          minutesToday = parseFloat(savedMinutes) || 0;
+        }
+      } else {
+        minutesToday = 0;
+        saveMinutesToday();
+      }
+      minutesEl.textContent = Math.floor(minutesToday);
+    } catch (e) {}
+  }
+
+  // --- settings persistence (localStorage) ---
+  const SETTINGS_KEY = 'nback-settings-v1';
+  const persistedInputs = [
+    { el: cubeDimension, key: 'cubeDimension', prop: 'value' },
+    { el: cubeSize,      key: 'cubeSize',      prop: 'value' },
+    { el: rotationSpeed, key: 'rotationSpeed', prop: 'value' },
+    { el: intervalMs,    key: 'intervalMs',    prop: 'value' },
+    { el: stimulusDurationMs, key: 'stimulusDurationMs', prop: 'value' },
+    { el: nValue,        key: 'nValue',        prop: 'value' },
+    { el: directionalOn, key: 'directionalOn', prop: 'checked' },
+    { el: soundOn,       key: 'soundOn',       prop: 'checked' },
+    { el: colorOn,       key: 'colorOn',       prop: 'checked' },
+    { el: shapeOn,       key: 'shapeOn',       prop: 'checked' },
+    { el: sizeOn,        key: 'sizeOn',        prop: 'checked' },
+  ];
+
+  function saveSettings() {
+    const data = {};
+    persistedInputs.forEach(s => { data[s.key] = s.el[s.prop]; });
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); } catch (e) {}
+  }
+
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      persistedInputs.forEach(s => {
+        if (data[s.key] !== undefined && data[s.key] !== null) {
+          s.el[s.prop] = data[s.key];
+        }
+      });
+    } catch (e) {}
+  }
+
+  persistedInputs.forEach(s => {
+    s.el.addEventListener('change', saveSettings);
+    if (s.prop === 'value') s.el.addEventListener('input', saveSettings);
+  });
+
+  loadSettings();
+  loadMinutesToday();
+  cubeWrapper.style.setProperty('--spin-speed', `${rotationSpeed.value}s`);
+  document.documentElement.style.setProperty('--cube-size', `${cubeSize.value}px`);
+  buildCube(+cubeDimension.value || 3);
+
+  // --- customizable keybinds ---
+  const KEYBINDS_KEY = 'nback-keybinds-v1';
+
+  const defaultBindings = {
+    'position': 'a', 'sound': 's', 'color': 'd', 'shape': 'f', 'size': 'g',
+    'north': 'ArrowUp', 'south': 'ArrowDown', 'west': 'ArrowLeft',
+    'east': 'ArrowRight', 'above': 'PageUp', 'below': 'PageDown',
+    'char-north': 'i', 'char-south': 'k', 'char-west': 'j',
+    'char-east': 'l', 'char-higher': 'u', 'char-lower': 'o',
+  };
+
+  const actionElements = {
+    'position':    { btn: positionBtn },
+    'sound':       { btn: soundBtn },
+    'color':       { btn: colorBtn },
+    'shape':       { btn: shapeBtn },
+    'size':        { btn: sizeBtn },
+    'north':       { selector: '[data-dir="north"]' },
+    'south':       { selector: '[data-dir="south"]' },
+    'west':        { selector: '[data-dir="west"]' },
+    'east':        { selector: '[data-dir="east"]' },
+    'above':       { selector: '[data-dir="above"]' },
+    'below':       { selector: '[data-dir="below"]' },
+    'char-north':  { selector: '[data-char="char-north"]' },
+    'char-south':  { selector: '[data-char="char-south"]' },
+    'char-west':   { selector: '[data-char="char-west"]' },
+    'char-east':   { selector: '[data-char="char-east"]' },
+    'char-higher': { selector: '[data-char="char-higher"]' },
+    'char-lower':  { selector: '[data-char="char-lower"]' },
+  };
+
+  const actionLabels = {
+    'position': 'Position', 'sound': 'Sound', 'color': 'Color',
+    'shape': 'Glyph', 'size': 'Size',
+    'north': 'North', 'south': 'South', 'west': 'West',
+    'east': 'East', 'above': 'Above', 'below': 'Below',
+    'char-north': 'Up', 'char-south': 'Down', 'char-west': 'Left',
+    'char-east': 'Right', 'char-higher': 'Higher', 'char-lower': 'Lower',
+  };
+
+  const keybindGroups = [
+    { title: 'Match', actions: ['position', 'sound', 'color', 'shape', 'size'] },
+    { title: 'Direction', actions: ['north', 'south', 'west', 'east', 'above', 'below'] },
+    { title: 'Character Grid', actions: ['char-north', 'char-south', 'char-west', 'char-east', 'char-higher', 'char-lower'] },
+  ];
+
+  function keyDisplayName(key) {
+    const names = {
+      'ArrowUp': '↑', 'ArrowDown': '↓', 'ArrowLeft': '←', 'ArrowRight': '→',
+      'PageUp': 'PgUp', 'PageDown': 'PgDn', ' ': 'Space', 'Escape': 'Esc',
+      'Enter': 'Enter', 'Backspace': 'Bksp', 'Tab': 'Tab', 'Delete': 'Del',
+    };
+    return names[key] || (key.length === 1 ? key.toUpperCase() : key);
+  }
+
+  const bindings = Object.assign({}, defaultBindings);
+  try {
+    const raw = localStorage.getItem(KEYBINDS_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      for (const [action, key] of Object.entries(saved)) {
+        if (action in defaultBindings) bindings[action] = key;
+      }
+    }
+  } catch (e) {}
+
+  function saveKeybinds() {
+    try { localStorage.setItem(KEYBINDS_KEY, JSON.stringify(bindings)); } catch (e) {}
+  }
+
+  const keyMap = {};
+  function rebuildKeyMap() {
+    for (const k in keyMap) delete keyMap[k];
+    for (const [action, key] of Object.entries(bindings)) {
+      keyMap[key] = { action, ...actionElements[action] };
+    }
+  }
+  rebuildKeyMap();
+
+  function updateHotkeyLabels() {
+    const q = s => document.querySelector(s);
+    q('.panel.pos .panel-hotkey').textContent = keyDisplayName(bindings.position);
+    q('.panel.dir .panel-hotkey').textContent =
+      [bindings.west, bindings.north, bindings.south, bindings.east, bindings.above, bindings.below]
+        .map(keyDisplayName).join(' ');
+    q('.panel.snd .panel-hotkey').textContent = keyDisplayName(bindings.sound);
+    q('.panel.col .panel-hotkey').textContent = keyDisplayName(bindings.color);
+    q('.panel.chr .panel-hotkey').textContent =
+      keyDisplayName(bindings.shape) + ' \u00b7 ' +
+      ['char-north', 'char-west', 'char-east', 'char-south', 'char-higher', 'char-lower']
+        .map(a => keyDisplayName(bindings[a])).join(' ');
+    q('.panel.siz .panel-hotkey').textContent = keyDisplayName(bindings.size);
+  }
+  updateHotkeyLabels();
+
+  // Build keybind settings UI
+  const keybindSettingsEl = document.getElementById('keybindSettings');
+  const kbButtons = {};
+  let listeningAction = null;
+
+  keybindGroups.forEach(group => {
+    const title = document.createElement('div');
+    title.className = 'kb-subgroup-title';
+    title.textContent = group.title;
+    keybindSettingsEl.appendChild(title);
+
+    group.actions.forEach(action => {
+      const row = document.createElement('div');
+      row.className = 'keybind-row';
+      const label = document.createElement('span');
+      label.className = 'kb-label';
+      label.textContent = actionLabels[action];
+      const btn = document.createElement('button');
+      btn.className = 'kb-key';
+      btn.type = 'button';
+      btn.textContent = keyDisplayName(bindings[action]);
+      btn.addEventListener('click', () => {
+        if (listeningAction) kbButtons[listeningAction].classList.remove('listening');
+        listeningAction = action;
+        btn.classList.add('listening');
+        btn.textContent = '\u2026';
+      });
+      row.appendChild(label);
+      row.appendChild(btn);
+      keybindSettingsEl.appendChild(row);
+      kbButtons[action] = btn;
+    });
+  });
+
+  function checkConflicts() {
+    const seen = {};
+    for (const action of Object.keys(bindings)) kbButtons[action]?.classList.remove('conflict');
+    for (const [action, key] of Object.entries(bindings)) {
+      if (seen[key]) {
+        kbButtons[action]?.classList.add('conflict');
+        kbButtons[seen[key]]?.classList.add('conflict');
+      }
+      seen[key] = action;
+    }
+  }
+  checkConflicts();
+
+  document.getElementById('resetKeybinds').addEventListener('click', () => {
+    Object.assign(bindings, defaultBindings);
+    for (const [action, btn] of Object.entries(kbButtons)) {
+      btn.textContent = keyDisplayName(bindings[action]);
+      btn.classList.remove('conflict');
+    }
+    if (listeningAction) {
+      kbButtons[listeningAction].classList.remove('listening');
+      listeningAction = null;
+    }
+    rebuildKeyMap();
+    updateHotkeyLabels();
+    saveKeybinds();
+  });
+
+  function flashBtn(btn) {
+    if (!btn) return;
+    btn.classList.add('key-active');
+    setTimeout(() => btn.classList.remove('key-active'), 120);
+  }
+
+  document.addEventListener('keydown', e => {
+    // Keybind capture mode
+    if (listeningAction) {
+      if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+      e.preventDefault();
+      if (e.key === 'Escape') {
+        kbButtons[listeningAction].textContent = keyDisplayName(bindings[listeningAction]);
+        kbButtons[listeningAction].classList.remove('listening');
+        listeningAction = null;
+        return;
+      }
+      const newKey = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      bindings[listeningAction] = newKey;
+      kbButtons[listeningAction].textContent = keyDisplayName(newKey);
+      kbButtons[listeningAction].classList.remove('listening');
+      listeningAction = null;
+      rebuildKeyMap();
+      updateHotkeyLabels();
+      checkConflicts();
+      saveKeybinds();
+      return;
+    }
+
+    // Game input
+    if (!interval) return;
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const mapping = keyMap[key];
+    if (!mapping) return;
+
+    e.preventDefault();
+    respond(mapping.action);
+    flashBtn(mapping.btn || document.querySelector(mapping.selector));
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (interval) {
+      stopGame();
+    }
+  });
 </script>
 
 </body>
