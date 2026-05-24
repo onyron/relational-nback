@@ -37,7 +37,8 @@
       --text-dim: #8a94b8;
       --text-faint: #4a5478;
 
-      --cube-size: 240px;
+      --user-cube-size: 240px;
+      --cube-size: var(--user-cube-size);
 
       --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
       --shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 1px var(--border-subtle);
@@ -225,6 +226,8 @@
 
     .cell {
       position: absolute;
+      top: 0;
+      left: 0;
       transform-style: preserve-3d;
     }
 
@@ -932,7 +935,7 @@
       .brand-text p { display: none; }
     }
     @media (max-width: 600px) {
-      :root { --cube-size: 200px; }
+      :root { --cube-size: min(var(--user-cube-size), 200px); }
       .dock { grid-template-columns: 1fr; }
       .dock-wrap { padding: 0 14px 20px; }
       .main { padding: 40px 14px 20px; }
@@ -944,7 +947,7 @@
       #characterGrid > div { padding: 20px 28px; font-size: 22px; }
     }
     @media (max-width: 380px) {
-      :root { --cube-size: 170px; }
+      :root { --cube-size: min(var(--user-cube-size), 170px); }
       .stage-frame { padding: 66px 50px; }
       .brand-text h1 { font-size: 13px; }
     }
@@ -1354,7 +1357,7 @@
     let px = parseInt(cubeSize.value, 10);
     if (!Number.isFinite(px) || px < 80) px = 80;
     if (px > 800) px = 800;
-    document.documentElement.style.setProperty('--cube-size', `${px}px`);
+    document.documentElement.style.setProperty('--user-cube-size', `${px}px`);
     buildCube(+cubeDimension.value || 3);
   }
   cubeSize.oninput = applyCubeSize;
@@ -1393,14 +1396,27 @@
   function showCharReference() { charReference.classList.add('visible'); }
   function hideCharReference() { charReference.classList.remove('visible'); }
 
+  function getTargetCubeSize() {
+    let configSize = parseInt(cubeSize.value, 10);
+    if (!Number.isFinite(configSize) || configSize < 80) configSize = 240;
+    if (configSize > 800) configSize = 800;
+
+    if (window.innerWidth <= 380) {
+      return Math.min(configSize, 170);
+    } else if (window.innerWidth <= 600) {
+      return Math.min(configSize, 200);
+    }
+    return configSize;
+  }
+
   function buildCube(n) {
     gridCube.innerHTML = '';
     cells = [];
-    const size = gridCube.clientWidth;
+    
+    const size = getTargetCubeSize();
     const cellSize = size / n;
     const offset = (n - 1) / 2;
     // shift so the cube's visual center aligns with the grid-cube's center
-    // (cells are position:absolute at top:0/left:0 so their top-left — not center — starts at the translate point)
     const shift = size / 2 - cellSize / 2;
 
     for (let x = 0; x < n; x++)
@@ -1792,7 +1808,7 @@
   loadSettings();
   loadMinutesToday();
   cubeWrapper.style.setProperty('--spin-speed', `${rotationSpeed.value}s`);
-  document.documentElement.style.setProperty('--cube-size', `${cubeSize.value}px`);
+  document.documentElement.style.setProperty('--user-cube-size', `${cubeSize.value}px`);
   buildCube(+cubeDimension.value || 3);
   updateResponseConsoleVisibility();
   updateTrialCardVisibility();
@@ -2014,6 +2030,14 @@
   }
 
   hideResponseConsole.addEventListener('change', updateResponseConsoleVisibility);
+
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      buildCube(+cubeDimension.value || 3);
+    }, 150);
+  });
 </script>
 
 </body>
