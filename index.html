@@ -1619,6 +1619,10 @@
   }
 
   startBtn.onclick = () => {
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
     if (interval || startGameTimeout) {
       stopGame();
     } else {
