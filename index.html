@@ -963,6 +963,10 @@
     body.game-active #startBtn:hover {
       background: rgba(248, 113, 113, 0.2);
     }
+    body.console-hidden .main {
+      align-items: center;
+      padding: 60px 24px;
+    }
   </style>
 </head>
 <body>
@@ -1974,8 +1978,10 @@
   function updateResponseConsoleVisibility() {
     if (hideResponseConsole.checked) {
       responseConsole.style.display = 'none';
+      document.body.classList.add('console-hidden');
     } else {
       responseConsole.style.display = '';
+      document.body.classList.remove('console-hidden');
     }
   }
 
