@@ -879,6 +879,14 @@
     /* ---------- FEEDBACK TOAST ---------- */
     .feedback-toast {
       display: none;
+      position: fixed;
+      top: 70px;
+      left: 24px;
+      z-index: 100;
+      width: max-content;
+      min-width: 180px;
+      max-width: 320px;
+
       flex-direction: column;
       gap: 4px;
       padding: 8px 14px;
@@ -888,9 +896,27 @@
       font-size: 11px;
       font-weight: 600;
       letter-spacing: 0.5px;
-      max-width: 420px;
-      margin: 0 auto;
-      animation: feedbackIn 0.2s ease-out;
+      animation: feedbackInLeft 0.2s ease-out;
+    }
+    .feedback-toast.visible { display: flex; }
+
+    @keyframes feedbackInLeft {
+      from { opacity: 0; transform: translateX(-8px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    @media (max-width: 900px) {
+      .feedback-toast {
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 420px;
+        animation: feedbackInMobile 0.2s ease-out;
+      }
+      
+      @keyframes feedbackInMobile {
+        from { opacity: 0; transform: translate(-50%, -4px); }
+        to   { opacity: 1; transform: translate(-50%, 0); }
+      }
     }
     .feedback-toast.visible { display: flex; }
     .feedback-toast .fb-line {
@@ -914,8 +940,8 @@
       color: var(--text-dim);
     }
     @keyframes feedbackIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translate(-50%, -4px); }
+      to   { opacity: 1; transform: translate(-50%, 0); }
     }
 
     /* ---------- FOOTER ---------- */
@@ -1205,7 +1231,7 @@
       <label>Feedback</label>
       <select id="feedbackMode">
         <option value="show">Show</option>
-        <option value="hide">Hide</option>
+        <option value="hide" selected>Hide</option>
         <option value="hideCounter">Hide counter only</option>
       </select>
     </div>
@@ -1220,7 +1246,7 @@
 
     <label class="toggle-row">
       <span class="tr-label"><span class="tr-icon">→</span>Directional</span>
-      <input type="checkbox" id="directionalOn">
+      <input type="checkbox" id="directionalOn" checked>
     </label>
     <label class="toggle-row">
       <span class="tr-label"><span class="tr-icon">♪</span>Sound</span>
