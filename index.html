@@ -1260,6 +1260,10 @@
       <label>Num Trials</label>
       <input type="number" id="numTrials" value="35" min="10" />
     </div>
+    <label class="toggle-row">
+      <span class="tr-label"><span class="tr-icon">∞</span>Infinite Mode</span>
+      <input type="checkbox" id="infiniteModeOn">
+    </label>
     <div class="setting-group">
       <label>Feedback</label>
       <select id="feedbackMode">
@@ -1331,6 +1335,7 @@
   const isiMs = document.getElementById('isiMs');
   const nValue = document.getElementById('nValue');
   const numTrials = document.getElementById('numTrials');
+  const infiniteModeOn = document.getElementById('infiniteModeOn');
   const feedbackMode = document.getElementById('feedbackMode');
   const trialCard = document.getElementById('trialCard');
   const hideResponseConsole = document.getElementById('hideResponseConsole');
@@ -1572,7 +1577,7 @@
     }
 
     const maxTrials = +numTrials.value;
-    if (maxTrials > 0 && intervalCount >= maxTrials) {
+    if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
       stopGame();
       return;
     }
@@ -1822,6 +1827,7 @@
     { el: colorOn,             key: 'colorOn',             prop: 'checked' },
     { el: shapeOn,             key: 'shapeOn',             prop: 'checked' },
     { el: sizeOn,              key: 'sizeOn',              prop: 'checked' },
+    { el: infiniteModeOn,       key: 'infiniteModeOn',       prop: 'checked' }
   ];
 
   function saveSettings() {
@@ -2125,6 +2131,17 @@
       });
     }
   }
+  function updateInfiniteModeUi() {
+    if (infiniteModeOn.checked) {
+      numTrials.disabled = true;
+      numTrials.style.opacity = '0.5';
+    } else {
+      numTrials.disabled = false;
+      numTrials.style.opacity = '1';
+    }
+  }
+  infiniteModeOn.addEventListener('change', updateInfiniteModeUi);
+  updateInfiniteModeUi();
 </script>
 
 </body>
