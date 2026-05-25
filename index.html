@@ -444,9 +444,12 @@
     }
 
     .dock {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-      gap: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: flex-start;
+      width: 100%;
     }
 
     .panel {
@@ -457,6 +460,33 @@
       box-shadow: var(--shadow);
       position: relative;
       overflow: hidden;
+      
+      width: 100%;
+      max-width: 340px;
+      height: auto;
+    }
+    @media (min-width: 1024px) {
+      .dock {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 10px;
+        align-items: stretch;
+        justify-content: center;
+      }
+
+      .panel.pos, .panel.snd, .panel.col, .panel.siz {
+        flex: 1 1 180px;
+        max-width: 240px;
+      }
+
+      .panel.dir, .panel.chr {
+        flex: 1.5 1 260px;
+        max-width: 320px;
+      }
+      
+      .panel {
+        max-width: none;
+      }
     }
     .panel::before {
       content: '';
@@ -1289,7 +1319,11 @@
     <div class="settings-section-title">Modalities</div>
 
     <label class="toggle-row">
-      <span class="tr-label"><span class="tr-icon">→</span>Directional</span>
+      <span class="tr-label"><span class="tr-icon">⌖</span>Position</span>
+      <input type="checkbox" id="positionOn" checked>
+    </label>
+    <label class="toggle-row">
+      <span class="tr-label"><span class="tr-icon">→</span>Direction</span>
       <input type="checkbox" id="directionalOn" checked>
     </label>
     <label class="toggle-row">
@@ -1348,6 +1382,7 @@
   const hideResponseConsole = document.getElementById('hideResponseConsole');
   const responseConsole = document.querySelector('.dock-wrap');
 
+  const positionOn = document.getElementById('positionOn');
   const directionalOn = document.getElementById('directionalOn');
   const soundOn = document.getElementById('soundOn');
   const colorOn = document.getElementById('colorOn');
@@ -1650,7 +1685,7 @@
       const a = history[history.length - 1 - n];
       const b = history[history.length - 1];
 
-      if (a.cell === b.cell) expected.add('position');
+      if (positionOn.checked && a.cell === b.cell) expected.add('position');
 
       if (directionalOn.checked) {
         const dx = b.cell.dataset.x - a.cell.dataset.x;
@@ -1695,6 +1730,14 @@
   }
 
   function respond(type) {
+    if (type === 'position' && !positionOn.checked) return;
+    if (['north', 'south', 'east', 'west', 'above', 'below'].includes(type) && !directionalOn.checked) return;
+    if (type === 'sound' && !soundOn.checked) return;
+    if (type === 'color' && !colorOn.checked) return;
+    if (type === 'shape' && !shapeOn.checked) return;
+    if (['char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'].includes(type) && !shapeOn.checked) return;
+    if (type === 'size' && !sizeOn.checked) return;
+
     total++;
     if (expected.has(type)) {
       correct++;
@@ -1831,6 +1874,7 @@
     { el: numTrials,           key: 'numTrials',           prop: 'value' },
     { el: feedbackMode,        key: 'feedbackMode',        prop: 'value' },
     { el: hideResponseConsole, key: 'hideResponseConsole', prop: 'checked' },
+    { el: positionOn,          key: 'positionOn',          prop: 'checked' },
     { el: directionalOn,       key: 'directionalOn',       prop: 'checked' },
     { el: soundOn,             key: 'soundOn',             prop: 'checked' },
     { el: colorOn,             key: 'colorOn',             prop: 'checked' },
@@ -1859,7 +1903,10 @@
   }
 
   persistedInputs.forEach(s => {
-    s.el.addEventListener('change', saveSettings);
+    s.el.addEventListener('change', () => {
+      saveSettings();
+      updateModalitiesUi();
+    });
     if (s.prop === 'value') s.el.addEventListener('input', saveSettings);
   });
 
@@ -1886,6 +1933,7 @@
   buildCube(+cubeDimension.value || 3);
   updateResponseConsoleVisibility();
   updateTrialCardVisibility();
+  updateModalitiesUi();
 
   // --- customizable keybinds ---
   const KEYBINDS_KEY = 'nback-keybinds-v1';
@@ -2151,6 +2199,27 @@
   }
   infiniteModeOn.addEventListener('change', updateInfiniteModeUi);
   updateInfiniteModeUi();
+
+  function updateModalitiesUi() {
+  const q = s => document.querySelector(s);
+  
+  const syncPanel = (checkbox, selector) => {
+    const panel = q(selector);
+    if (!panel) return;
+    if (checkbox.checked) {
+      panel.style.display = '';
+    } else {
+      panel.style.display = 'none';
+    }
+  };
+
+  syncPanel(positionOn, '.panel.pos');
+  syncPanel(directionalOn, '.panel.dir');
+  syncPanel(soundOn, '.panel.snd');
+  syncPanel(colorOn, '.panel.col');
+  syncPanel(shapeOn, '.panel.chr');
+  syncPanel(sizeOn, '.panel.siz');
+}
 </script>
 
 </body>
