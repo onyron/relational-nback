@@ -1026,6 +1026,13 @@
       align-items: center;
       padding: 60px 24px;
     }
+    button:focus,
+    .btn:focus,
+    .icon-btn:focus,
+    .response-btn:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
   </style>
 </head>
 <body>
@@ -1699,6 +1706,8 @@
   }
 
   startBtn.onclick = () => {
+    startBtn.blur();
+
     if (audioCtx.state === 'suspended') {
       audioCtx.resume();
     }
