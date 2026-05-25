@@ -2121,8 +2121,6 @@
       return;
     }
 
-    // Game input
-    if (!interval) return;
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
 
@@ -2131,8 +2129,12 @@
     if (!mapping) return;
 
     e.preventDefault();
-    respond(mapping.action);
+    
     flashBtn(mapping.btn || document.querySelector(mapping.selector));
+
+    if (interval) {
+      respond(mapping.action);
+    }
   });
 
   window.addEventListener('beforeunload', () => {
