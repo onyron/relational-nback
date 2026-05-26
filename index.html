@@ -2240,7 +2240,8 @@
     falseAlarms.clear();
     clearCells();
 
-    const cell = cells[Math.floor(Math.random()*cells.length)];
+    const cellIndex = Math.floor(Math.random()*cells.length);
+    const cell = cells[cellIndex];
     cell.classList.add('active');
 
     let sound = null;
@@ -2272,7 +2273,7 @@
       cell.querySelectorAll('.cell-face').forEach(f => f.style.fontSize = `${size}px`);
     }
 
-    history.push({ cell, sound, color, shape, size });
+    history.push({ cellIndex, sound, color, shape, size });
 
     const duration = Math.max(50, +intervalMs.value - +isiMs.value);
 
@@ -2291,7 +2292,7 @@
       const a = history[history.length - 1 - n];
       const b = history[history.length - 1];
 
-      if (positionOn.checked && a.cell === b.cell) expected.add('position');
+      if (positionOn.checked && a.cellIndex === b.cellIndex) expected.add('position');
 
       if (directionalOn.checked) {
         const dx = b.cell.dataset.x - a.cell.dataset.x;
@@ -2837,6 +2838,7 @@
   }
 
   document.addEventListener('keydown', e => {
+    if (e.repeat) return; 
     // Keybind capture mode
     if (listeningAction) {
       if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
