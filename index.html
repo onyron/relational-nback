@@ -2380,7 +2380,7 @@
     if (['char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'].includes(type) && !shapeOn.checked) return;
     if (type === 'size' && !sizeOn.checked) return;
     if (currentIntervalResponses.has(type)) return;
-    
+
     total++;
     if (expected.has(type)) {
       correct++;
@@ -2463,7 +2463,9 @@
     hideCharReference();
 
     if (sessionStart && intervalCount > 0 && total > 0) {
-      saveCurrentSession();
+      if (naturalEnd || infiniteModeOn.checked) {
+        saveCurrentSession();
+      }
     }
 
     if (sessionStart) {
