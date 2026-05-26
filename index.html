@@ -2049,6 +2049,8 @@
   let winStreakCount = 0;
   let loseStreakCount = 0;
 
+  let currentIntervalResponses = new Set();
+
   const responseLabels = {
     position: 'Position',
     north: 'North', south: 'South', east: 'East', west: 'West',
@@ -2245,6 +2247,8 @@
   }
 
   function nextStimulus() {
+    currentIntervalResponses.clear();
+
     const missed = [...expected];
     const wrong = [...falseAlarms];
 
@@ -2375,7 +2379,8 @@
     if (type === 'shape' && !shapeOn.checked) return;
     if (['char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'].includes(type) && !shapeOn.checked) return;
     if (type === 'size' && !sizeOn.checked) return;
-
+    if (currentIntervalResponses.has(type)) return;
+    
     total++;
     if (expected.has(type)) {
       correct++;
@@ -2403,6 +2408,7 @@
       history = [];
       expected.clear();
       falseAlarms.clear();
+      currentIntervalResponses.clear();
       hideFeedback();
       intervalCount = correct = total = 0;
       updateAccuracy();
