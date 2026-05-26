@@ -1,4 +1,4 @@
-# Relational N-Back (v2.5)
+# Relational N-Back (v3)
 
 A highly customizable 3D Relational N-Back cognitive training console.
 
