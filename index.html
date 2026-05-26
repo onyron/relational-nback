@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Relational N-Back — Cognitive Training Console</title>
+  <title>Relational N-Back</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -1566,6 +1566,13 @@
     </div>
 
     <div class="stats">
+      <div class="stat-card" id="nBackCard">
+        <div class="stat-icon" style="background: rgba(110,231,255,0.1); border-color: rgba(110,231,255,0.25); color: var(--accent);">N</div>
+        <div>
+          <div class="stat-label">Level</div>
+          <div class="stat-value" id="topbarNValue">2</div>
+        </div>
+      </div>
       <div class="stat-card">
         <div class="stat-icon good">✓</div>
         <div>
@@ -1980,6 +1987,7 @@
   const intervalCountEl = document.getElementById('intervalCount') || { textContent: '' };
   const accuracyEl = document.getElementById('accuracy');
   const minutesEl = document.getElementById('minutes');
+  const topbarNValue = document.getElementById('topbarNValue');
 
   const cubeDimension = document.getElementById('cubeDimension');
   const cubeSize = document.getElementById('cubeSize');
@@ -2598,6 +2606,12 @@
     slider.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${percentage}%, var(--bg-2) ${percentage}%, var(--bg-2) 100%)`;
   }
 
+  function updateTopbarN() {
+    if (topbarNValue && nValue) {
+      topbarNValue.textContent = nValue.value;
+    }
+  }
+
   autoProgressionOn.addEventListener('change', () => {
     updateAutoProgressionUi();
     winStreakCount = 0;
@@ -2631,6 +2645,7 @@
         const oldN = +nValue.value;
         nValue.value = oldN + 1;
         saveSettings();
+        updateTopbarN();
         winStreakCount = 0;
         showAutoProgressionToast(`Level Up! N increased to ${nValue.value}`);
       }
@@ -2685,6 +2700,7 @@
   nValue.addEventListener('change', () => {
     winStreakCount = 0;
     loseStreakCount = 0;
+    updateTopbarN();
   });
 
   loadSettings();
@@ -2696,6 +2712,7 @@
   updateTrialCardVisibility();
   updateModalitiesUi();
   updateAutoProgressionUi();
+  updateTopbarN();
 
   // --- customizable keybinds ---
   const KEYBINDS_KEY = 'nback-keybinds-v1';
