@@ -1063,6 +1063,54 @@
       outline: none !important;
       box-shadow: none !important;
     }
+
+    /* --- AUTO PROGRESSION SLIDERS --- */
+    .ap-slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: var(--bg-2);
+      border: 1px solid var(--border-subtle);
+      outline: none;
+      margin: 8px 0;
+      transition: border-color 0.15s;
+    }
+    .ap-slider:focus {
+      border-color: var(--accent);
+    }
+    .ap-slider::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 8px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .ap-slider::-webkit-slider-thumb {
+      height: 18px;
+      width: 18px;
+      border-radius: 4px;
+      background: var(--accent);
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -5px;
+      box-shadow: 0 0 10px var(--accent);
+      border: 1px solid #fff;
+    }
+    .ap-slider::-moz-range-track {
+      width: 100%;
+      height: 8px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .ap-slider::-moz-range-thumb {
+      height: 18px;
+      width: 18px;
+      border-radius: 4px;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--accent);
+      border: 1px solid #fff;
+    }
   </style>
 </head>
 <body>
@@ -1103,7 +1151,7 @@
     </div>
   </header>
 
-  <!-- STAGE -->
+  <!-- MAIN -->
   <main class="main">
     <div class="stage">
       <div class="stage-frame">
@@ -1316,6 +1364,32 @@
   </div>
 
   <div class="settings-section">
+    <div class="settings-section-title">Auto Progression</div>
+    <label class="toggle-row">
+      <span class="tr-label"><span class="tr-icon">⇪</span>Auto Progression</span>
+      <input type="checkbox" id="autoProgressionOn">
+    </label>
+    <div id="autoProgressionControls" style="display: none; margin-top: 10px;">
+      <div class="setting-group">
+        <label id="apWinThresholdLabel">When >= 80%</label>
+        <input type="range" id="apWinThreshold" min="50" max="100" step="5" value="80" class="ap-slider" />
+      </div>
+      <div class="setting-group">
+        <label id="apWinStreakLabel">Win after: 1 in a row</label>
+        <input type="range" id="apWinStreak" min="1" max="10" step="1" value="1" class="ap-slider" />
+      </div>
+      <div class="setting-group">
+        <label id="apLoseThresholdLabel">When < 50%</label>
+        <input type="range" id="apLoseThreshold" min="10" max="75" step="5" value="50" class="ap-slider" />
+      </div>
+      <div class="setting-group">
+        <label id="apLoseStreakLabel">Lose after: 3 in a row</label>
+        <input type="range" id="apLoseStreak" min="1" max="10" step="1" value="3" class="ap-slider" />
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
     <div class="settings-section-title">Modalities</div>
 
     <label class="toggle-row">
@@ -1402,6 +1476,18 @@
 
   const feedbackToast = document.getElementById('feedbackToast');
 
+  // Auto Progression elements
+  const autoProgressionOn = document.getElementById('autoProgressionOn');
+  const autoProgressionControls = document.getElementById('autoProgressionControls');
+  const apWinThreshold = document.getElementById('apWinThreshold');
+  const apWinThresholdLabel = document.getElementById('apWinThresholdLabel');
+  const apWinStreak = document.getElementById('apWinStreak');
+  const apWinStreakLabel = document.getElementById('apWinStreakLabel');
+  const apLoseThreshold = document.getElementById('apLoseThreshold');
+  const apLoseThresholdLabel = document.getElementById('apLoseThresholdLabel');
+  const apLoseStreak = document.getElementById('apLoseStreak');
+  const apLoseStreakLabel = document.getElementById('apLoseStreakLabel');
+
   let cells = [];
   let history = [];
   let expected = new Set();
@@ -1412,6 +1498,10 @@
   let correct = 0;
   let total = 0;
   let startGameTimeout = null;
+
+  // Auto Progression streaks
+  let winStreakCount = 0;
+  let loseStreakCount = 0;
 
   const responseLabels = {
     position: 'Position',
@@ -1620,7 +1710,8 @@
 
     const maxTrials = +numTrials.value;
     if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
-      stopGame();
+      checkAutoProgression();
+      stopGame(true);
       return;
     }
 
@@ -1787,9 +1878,14 @@
     }
   };
 
-  function stopGame() {
+  function stopGame(naturalEnd = false) {
     document.body.classList.remove('game-active');
     startBtn.innerHTML = '▶ Play';
+
+    if (!naturalEnd) {
+      winStreakCount = 0;
+      loseStreakCount = 0;
+    }
 
     if (startGameTimeout) {
       clearTimeout(startGameTimeout);
@@ -1880,7 +1976,12 @@
     { el: colorOn,             key: 'colorOn',             prop: 'checked' },
     { el: shapeOn,             key: 'shapeOn',             prop: 'checked' },
     { el: sizeOn,              key: 'sizeOn',              prop: 'checked' },
-    { el: infiniteModeOn,       key: 'infiniteModeOn',       prop: 'checked' }
+    { el: infiniteModeOn,       key: 'infiniteModeOn',       prop: 'checked' },
+    { el: autoProgressionOn,   key: 'autoProgressionOn',   prop: 'checked' },
+    { el: apWinThreshold,      key: 'apWinThreshold',      prop: 'value' },
+    { el: apWinStreak,         key: 'apWinStreak',         prop: 'value' },
+    { el: apLoseThreshold,     key: 'apLoseThreshold',     prop: 'value' },
+    { el: apLoseStreak,        key: 'apLoseStreak',        prop: 'value' }
   ];
 
   function saveSettings() {
@@ -1926,6 +2027,122 @@
     saveSettings();
   });
 
+  // --- Auto Progression UI & Logic ---
+  function updateAutoProgressionUi() {
+    if (autoProgressionOn.checked) {
+      autoProgressionControls.style.display = 'block';
+    } else {
+      autoProgressionControls.style.display = 'none';
+    }
+    
+    apWinThresholdLabel.textContent = `When >= ${apWinThreshold.value}%`;
+    apWinStreakLabel.textContent = `Win after: ${apWinStreak.value} in a row`;
+    apLoseThresholdLabel.textContent = `When < ${apLoseThreshold.value}%`;
+    apLoseStreakLabel.textContent = `Lose after: ${apLoseStreak.value} in a row`;
+
+    updateSliderBackground(apWinThreshold);
+    updateSliderBackground(apWinStreak);
+    updateSliderBackground(apLoseThreshold);
+    updateSliderBackground(apLoseStreak);
+  }
+
+  function updateSliderBackground(slider) {
+    const min = +slider.min || 0;
+    const max = +slider.max || 100;
+    const val = +slider.value;
+    const percentage = ((val - min) / (max - min)) * 100;
+    slider.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${percentage}%, var(--bg-2) ${percentage}%, var(--bg-2) 100%)`;
+  }
+
+  autoProgressionOn.addEventListener('change', () => {
+    updateAutoProgressionUi();
+    winStreakCount = 0;
+    loseStreakCount = 0;
+  });
+
+  [apWinThreshold, apWinStreak, apLoseThreshold, apLoseStreak].forEach(slider => {
+    slider.addEventListener('input', updateAutoProgressionUi);
+    slider.addEventListener('change', saveSettings);
+  });
+
+  function checkAutoProgression() {
+    if (!autoProgressionOn.checked) return;
+
+    if (expected.size) {
+      total += expected.size;
+      expected.clear();
+    }
+    
+    const finalAccuracy = total ? Math.round((correct / total) * 100) : 0;
+    
+    const winThresh = +apWinThreshold.value;
+    const winStreakReq = +apWinStreak.value;
+    const loseThresh = +apLoseThreshold.value;
+    const loseStreakReq = +apLoseStreak.value;
+
+    if (finalAccuracy >= winThresh) {
+      winStreakCount++;
+      loseStreakCount = 0;
+      if (winStreakCount >= winStreakReq) {
+        const oldN = +nValue.value;
+        nValue.value = oldN + 1;
+        saveSettings();
+        winStreakCount = 0;
+        showAutoProgressionToast(`Level Up! N increased to ${nValue.value}`);
+      }
+    } else if (finalAccuracy < loseThresh) {
+      loseStreakCount++;
+      winStreakCount = 0;
+      if (loseStreakCount >= loseStreakReq) {
+        const oldN = +nValue.value;
+        if (oldN > 1) {
+          nValue.value = oldN - 1;
+          saveSettings();
+          showAutoProgressionToast(`Level Down. N decreased to ${nValue.value}`);
+        }
+        loseStreakCount = 0;
+      }
+    } else {
+      winStreakCount = 0;
+      loseStreakCount = 0;
+    }
+  }
+
+  function showAutoProgressionToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'feedback-toast visible';
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.zIndex = '9999';
+    toast.style.borderColor = 'var(--accent)';
+    toast.style.boxShadow = '0 0 15px var(--accent)';
+    toast.style.textAlign = 'center';
+    
+    const line = document.createElement('div');
+    line.className = 'fb-line';
+    line.style.color = 'var(--accent)';
+    line.style.fontSize = '14px';
+    line.style.fontWeight = '800';
+    line.style.textTransform = 'uppercase';
+    line.textContent = message;
+    
+    toast.appendChild(line);
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.5s ease';
+      setTimeout(() => toast.remove(), 500);
+    }, 4000);
+  }
+
+  nValue.addEventListener('change', () => {
+    winStreakCount = 0;
+    loseStreakCount = 0;
+  });
+
   loadSettings();
   loadMinutesToday();
   cubeWrapper.style.setProperty('--spin-speed', `${rotationSpeed.value}s`);
@@ -1934,6 +2151,7 @@
   updateResponseConsoleVisibility();
   updateTrialCardVisibility();
   updateModalitiesUi();
+  updateAutoProgressionUi();
 
   // --- customizable keybinds ---
   const KEYBINDS_KEY = 'nback-keybinds-v1';
@@ -2023,7 +2241,7 @@
     q('.panel.snd .panel-hotkey').textContent = keyDisplayName(bindings.sound);
     q('.panel.col .panel-hotkey').textContent = keyDisplayName(bindings.color);
     q('.panel.chr .panel-hotkey').textContent =
-      keyDisplayName(bindings.shape) + ' \u00b7 ' +
+      keyDisplayName(bindings.shape) + ' · ' +
       ['char-north', 'char-west', 'char-east', 'char-south', 'char-higher', 'char-lower']
         .map(a => keyDisplayName(bindings[a])).join(' ');
     q('.panel.siz .panel-hotkey').textContent = keyDisplayName(bindings.size);
@@ -2055,7 +2273,7 @@
         if (listeningAction) kbButtons[listeningAction].classList.remove('listening');
         listeningAction = action;
         btn.classList.add('listening');
-        btn.textContent = '\u2026';
+        btn.textContent = '…';
       });
       row.appendChild(label);
       row.appendChild(btn);
@@ -2203,25 +2421,25 @@
   updateInfiniteModeUi();
 
   function updateModalitiesUi() {
-  const q = s => document.querySelector(s);
-  
-  const syncPanel = (checkbox, selector) => {
-    const panel = q(selector);
-    if (!panel) return;
-    if (checkbox.checked) {
-      panel.style.display = '';
-    } else {
-      panel.style.display = 'none';
-    }
-  };
+    const q = s => document.querySelector(s);
+    
+    const syncPanel = (checkbox, selector) => {
+      const panel = q(selector);
+      if (!panel) return;
+      if (checkbox.checked) {
+        panel.style.display = '';
+      } else {
+        panel.style.display = 'none';
+      }
+    };
 
-  syncPanel(positionOn, '.panel.pos');
-  syncPanel(directionalOn, '.panel.dir');
-  syncPanel(soundOn, '.panel.snd');
-  syncPanel(colorOn, '.panel.col');
-  syncPanel(shapeOn, '.panel.chr');
-  syncPanel(sizeOn, '.panel.siz');
-}
+    syncPanel(positionOn, '.panel.pos');
+    syncPanel(directionalOn, '.panel.dir');
+    syncPanel(soundOn, '.panel.snd');
+    syncPanel(colorOn, '.panel.col');
+    syncPanel(shapeOn, '.panel.chr');
+    syncPanel(sizeOn, '.panel.siz');
+  }
 </script>
 
 </body>
