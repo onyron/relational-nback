@@ -2052,8 +2052,8 @@
   let history = [];
   let expected = new Set();
   let falseAlarms = new Set();
-  let interval = null;
-  let stimulusTimeout = null;
+  let timerWorker = null;
+  let gameActive = false;
   let intervalCount = 0;
   let startGameTimeout = null;
 
@@ -2111,6 +2111,39 @@
     return list;
   }
 
+  function initTimerWorker() {
+    if (timerWorker) return;
+    const blob = new Blob([`
+      let timer = null;
+      let clearTimer = null;
+      self.onmessage = function(e) {
+        if (e.data.action === 'start') {
+          clearInterval(timer);
+          clearTimeout(clearTimer);
+          const run = () => {
+            self.postMessage({ type: 'stimulus' });
+            clearTimer = setTimeout(() => {
+              self.postMessage({ type: 'clear' });
+            }, e.data.activeDuration);
+          };
+          run();
+          timer = setInterval(run, e.data.interval);
+        } else if (e.data.action === 'stop') {
+          clearInterval(timer);
+          clearTimeout(clearTimer);
+        }
+      };
+    `], { type: 'application/javascript' });
+    timerWorker = new Worker(URL.createObjectURL(blob));
+    timerWorker.onmessage = function(e) {
+      if (e.data.type === 'stimulus') {
+        nextStimulus();
+      } else if (e.data.type === 'clear') {
+        clearCells();
+      }
+    };
+  }
+
   const responseLabels = {
     position: 'Position',
     north: 'North', south: 'South', east: 'East', west: 'West',
@@ -2141,7 +2174,12 @@
   const charReference = document.getElementById('charReference');
   const charReferenceGrid = document.getElementById('charReferenceGrid');
 
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let audioCtx = null;
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
 
 
   // --- Adaptive anti-loop cube rotation ---
@@ -2283,7 +2321,7 @@ function computeSmartRotation(now) {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       stopSmartRotation();
-      if (interval) {
+      if (gameActive) {
         stopGame();
       }
     } else {
@@ -2401,13 +2439,18 @@ function computeSmartRotation(now) {
   }
 
   function playTone(freq) {
+    initAudio();
     if (audioCtx.state === 'suspended') {
       audioCtx.resume();
     }
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
+    
     osc.frequency.value = freq;
-    gain.gain.value = 0.05;
+    
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
+    
     osc.connect(gain).connect(audioCtx.destination);
     osc.start();
     osc.stop(audioCtx.currentTime + 0.15);
@@ -2529,18 +2572,6 @@ function nextStimulus() {
       history.shift();
     }
 
-    const duration = Math.max(50, +intervalMs.value - +isiMs.value);
-
-    if (stimulusTimeout) {
-      clearTimeout(stimulusTimeout);
-    }
-
-    stimulusTimeout = setTimeout(() => {
-      if (interval) {
-        clearCells();
-      }
-    }, duration);
-
     if (history.length > n) {
       const a = history[history.length - 1 - n];
       const b = history[history.length - 1];
@@ -2621,11 +2652,12 @@ function nextStimulus() {
   startBtn.onclick = () => {
     startBtn.blur();
 
+    initAudio();
     if (audioCtx.state === 'suspended') {
       audioCtx.resume();
     }
 
-    if (interval || startGameTimeout) {
+    if (gameActive || startGameTimeout) {
       stopGame();
     } else {
       closeSettingsFn();
@@ -2655,8 +2687,16 @@ function nextStimulus() {
 
       startGameTimeout = setTimeout(() => {
         sessionStart = Date.now();
-        nextStimulus();
-        interval = setInterval(nextStimulus, +intervalMs.value);
+        initTimerWorker();
+        gameActive = true;
+        const msVal = parseInt(intervalMs.value, 10) || 2500;
+        const isiVal = parseInt(isiMs.value, 10) || 350;
+        const activeDur = Math.max(50, msVal - isiVal);
+        timerWorker.postMessage({
+          action: 'start',
+          interval: msVal,
+          activeDuration: activeDur
+        });
         startGameTimeout = null;
       }, 500);
     }
@@ -2669,6 +2709,7 @@ function nextStimulus() {
     if (!naturalEnd) {
       winStreakCount = 0;
       loseStreakCount = 0;
+      saveSettings();
     }
 
     if (startGameTimeout) {
@@ -2676,11 +2717,9 @@ function nextStimulus() {
       startGameTimeout = null;
     }
 
-    clearInterval(interval);
-    interval = null;
-    if (stimulusTimeout) {
-      clearTimeout(stimulusTimeout);
-      stimulusTimeout = null;
+    gameActive = false;
+    if (timerWorker) {
+      timerWorker.postMessage({ action: 'stop' });
     }
     clearCells();
 
@@ -2777,6 +2816,8 @@ function nextStimulus() {
   function saveSettings() {
     const data = {};
     persistedInputs.forEach(s => { data[s.key] = s.el[s.prop]; });
+    data.winStreakCount = winStreakCount;
+    data.loseStreakCount = loseStreakCount;
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); } catch (e) {}
   }
 
@@ -2791,6 +2832,8 @@ function nextStimulus() {
           s.el[s.prop] = data[s.key];
         }
       });
+      if (data.winStreakCount !== undefined) winStreakCount = data.winStreakCount;
+      if (data.loseStreakCount !== undefined) loseStreakCount = data.loseStreakCount;
       updateRotationTempoCache();
     } catch (e) {}
   }
@@ -2877,20 +2920,23 @@ function nextStimulus() {
     const loseThresh = parseFloat(apLoseThreshold.value);
     const loseStreakReq = parseInt(apLoseStreak.value, 10);
 
-    if (dp >= winThresh) {
+if (dp >= winThresh) {
       winStreakCount++;
       loseStreakCount = 0;
+      saveSettings();
       if (winStreakCount >= winStreakReq) {
         const oldN = +nValue.value;
         nValue.value = oldN + 1;
         saveSettings();
         updateTopbarN();
         winStreakCount = 0;
+        saveSettings();
         showAutoProgressionToast(`Level Up! N increased to ${nValue.value}`);
       }
     } else if (dp < loseThresh) {
       loseStreakCount++;
       winStreakCount = 0;
+      saveSettings();
       if (loseStreakCount >= loseStreakReq) {
         const oldN = +nValue.value;
         if (oldN > 1) {
@@ -2899,10 +2945,12 @@ function nextStimulus() {
           showAutoProgressionToast(`Level Down. N decreased to ${nValue.value}`);
         }
         loseStreakCount = 0;
+        saveSettings();
       }
     } else {
       winStreakCount = 0;
       loseStreakCount = 0;
+      saveSettings();
     }
   }
 
@@ -3153,7 +3201,7 @@ function nextStimulus() {
     
     flashBtn(mapping.btn || document.querySelector(mapping.selector));
 
-    if (interval) {
+    if (gameActive) {
       respond(mapping.action);
     }
   });
@@ -3166,7 +3214,7 @@ function nextStimulus() {
   });
 
   window.addEventListener('beforeunload', () => {
-    if (interval) {
+    if (gameActive) {
       stopGame();
     }
   });
