@@ -1590,7 +1590,7 @@
       <div class="stat-card">
         <div class="stat-icon good">✓</div>
         <div>
-          <div class="stat-label">Accuracy</div>
+          <div class="stat-label">d'</div>
           <div class="stat-value" id="accuracy">—</div>
         </div>
       </div>
@@ -1834,16 +1834,16 @@
     </label>
     <div id="autoProgressionControls" style="display: none; margin-top: 10px;">
       <div class="setting-group">
-        <label id="apWinThresholdLabel">When >= 80%</label>
-        <input type="range" id="apWinThreshold" min="50" max="100" step="5" value="80" class="ap-slider" />
+        <label id="apWinThresholdLabel">When d' >= 2.5</label>
+        <input type="range" id="apWinThreshold" min="1.0" max="4.0" step="0.1" value="2.5" class="ap-slider" />
       </div>
       <div class="setting-group">
         <label id="apWinStreakLabel">Win after: 1 in a row</label>
         <input type="range" id="apWinStreak" min="1" max="10" step="1" value="1" class="ap-slider" />
       </div>
       <div class="setting-group">
-        <label id="apLoseThresholdLabel">When < 50%</label>
-        <input type="range" id="apLoseThreshold" min="10" max="75" step="5" value="50" class="ap-slider" />
+        <label id="apLoseThresholdLabel">When d' < 1.2</label>
+        <input type="range" id="apLoseThreshold" min="0.0" max="2.0" step="0.1" value="1.2" class="ap-slider" />
       </div>
       <div class="setting-group">
         <label id="apLoseStreakLabel">Lose after: 3 in a row</label>
@@ -1924,15 +1924,15 @@
         </div>
 
         <div class="stats-summary-card">
-          <div class="stats-summary-label">Average Accuracy</div>
-          <div class="stats-summary-value" id="statsAccuracyValue">0%</div>
+          <div class="stats-summary-label">Average d'</div>
+          <div class="stats-summary-value" id="statsAccuracyValue">—</div>
           <div class="stats-summary-sub">Across all recorded sessions</div>
         </div>
 
         <div class="stats-summary-card">
-          <div class="stats-summary-label">Best Run</div>
-          <div class="stats-summary-value" id="statsBestValue">0%</div>
-          <div class="stats-summary-sub">Highest session accuracy</div>
+          <div class="stats-summary-label">Best d'</div>
+          <div class="stats-summary-value" id="statsBestValue">—</div>
+          <div class="stats-summary-sub">Highest session d'</div>
         </div>
 
         <div class="stats-summary-card">
@@ -1948,7 +1948,7 @@
             <tr>
               <th>Date</th>
               <th>Game</th>
-              <th>Accuracy</th>
+              <th>d'</th>
               <th>Trials</th>
               <th>Modalities</th>
               <th>Time</th>
@@ -1983,7 +1983,7 @@
 
         <div class="stats-card-panel">
           <div class="stats-panel-title">
-            <h3>Average Accuracy</h3>
+            <h3>Average d'</h3>
           </div>
 
           <canvas id="progressChart" width="960" height="320"></canvas>
@@ -2055,8 +2055,6 @@
   let interval = null;
   let stimulusTimeout = null;
   let intervalCount = 0;
-  let correct = 0;
-  let total = 0;
   let startGameTimeout = null;
 
   // Auto Progression streaks
@@ -2064,6 +2062,54 @@
   let loseStreakCount = 0;
 
   let currentIntervalResponses = new Set();
+
+  let hits = 0;
+  let falseAlarmsCount = 0;
+  let targetsCount = 0;
+  let nonTargetsCount = 0;
+
+  function p2z(p) {
+    if (p <= 0) return -3.5;
+    if (p >= 1) return 3.5;
+    
+    const c0 = 2.515517;
+    const c1 = 0.802853;
+    const c2 = 0.010328;
+    const d1 = 1.432788;
+    const d2 = 0.189269;
+    const d3 = 0.001308;
+    
+    let t;
+    if (p < 0.5) {
+      t = Math.sqrt(-2.0 * Math.log(p));
+      return -(t - ((c2 * t + c1) * t + c0) / (((d3 * t + d2) * t + d1) * t + 1.0));
+    } else {
+      t = Math.sqrt(-2.0 * Math.log(1.0 - p));
+      return t - ((c2 * t + c1) * t + c0) / (((d3 * t + d2) * t + d1) * t + 1.0);
+    }
+  }
+
+  function calculateDPrime() {
+    if (targetsCount === 0 || nonTargetsCount === 0) return 0;
+    const adjustedHitRate = (hits + 0.5) / (targetsCount + 1);
+    const adjustedFarRate = (falseAlarmsCount + 0.5) / (nonTargetsCount + 1);
+    return p2z(adjustedHitRate) - p2z(adjustedFarRate);
+  }
+
+  function getActiveFeatures() {
+    const list = [];
+    if (positionOn.checked) list.push('position');
+    if (soundOn.checked) list.push('sound');
+    if (colorOn.checked) list.push('color');
+    if (sizeOn.checked) list.push('size');
+    if (directionalOn.checked) {
+      list.push('north', 'south', 'east', 'west', 'above', 'below');
+    }
+    if (shapeOn.checked) {
+      list.push('shape', 'char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower');
+    }
+    return list;
+  }
 
   const responseLabels = {
     position: 'Position',
@@ -2418,12 +2464,6 @@ function nextStimulus() {
     const missed = [...expected];
     const wrong = [...falseAlarms];
 
-    if (expected.size) {
-      total += expected.size;
-      expected.clear();
-      updateAccuracy();
-    }
-
     const maxTrials = +numTrials.value;
     if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
       checkAutoProgression();
@@ -2436,6 +2476,14 @@ function nextStimulus() {
       showFeedback(missed, wrong);
     } else {
       hideFeedback();
+    }
+
+    if (history.length > n) {
+      if (expected.size > 0) {
+        expected.clear();
+      }
+    } else {
+      expected.clear();
     }
 
     falseAlarms.clear();
@@ -2531,6 +2579,10 @@ function nextStimulus() {
       }
 
       if (sizeOn.checked && a.size === b.size) expected.add('size');
+
+      const activeFeatures = getActiveFeatures();
+      targetsCount += expected.size;
+      nonTargetsCount += (activeFeatures.length - expected.size);
     }
 
     intervalCount++;
@@ -2538,7 +2590,8 @@ function nextStimulus() {
   }
 
   function updateAccuracy() {
-    accuracyEl.textContent = total ? `${Math.round((correct/total)*100)}%` : '—';
+    const dp = calculateDPrime();
+    accuracyEl.textContent = (targetsCount > 0 || nonTargetsCount > 0) ? dp.toFixed(2) : '—';
   }
 
   function respond(type) {
@@ -2552,14 +2605,17 @@ function nextStimulus() {
     if (currentIntervalResponses.has(type)) return;
     currentIntervalResponses.add(type);
 
-    total++;
-    if (expected.has(type)) {
-      correct++;
-      expected.delete(type);
-    } else {
-      falseAlarms.add(type);
+    const n = +nValue.value;
+    if (history.length > n) {
+      if (expected.has(type)) {
+        hits++;
+        expected.delete(type);
+      } else {
+        falseAlarmsCount++;
+        falseAlarms.add(type);
+      }
+      updateAccuracy();
     }
-    updateAccuracy();
   }
 
   startBtn.onclick = () => {
@@ -2581,7 +2637,11 @@ function nextStimulus() {
       falseAlarms.clear();
       currentIntervalResponses.clear();
       hideFeedback();
-      intervalCount = correct = total = 0;
+      intervalCount = 0;
+      hits = 0;
+      falseAlarmsCount = 0;
+      targetsCount = 0;
+      nonTargetsCount = 0;
       updateAccuracy();
       intervalCountEl.textContent = '0';
 
@@ -2625,7 +2685,6 @@ function nextStimulus() {
     clearCells();
 
     if (expected.size) {
-      total += expected.size;
       expected.clear();
       updateAccuracy();
     }
@@ -2633,7 +2692,7 @@ function nextStimulus() {
     hideFeedback();
     hideCharReference();
 
-    if (sessionStart && intervalCount > 0 && total > 0) {
+    if (sessionStart && intervalCount > 0 && (targetsCount > 0 || nonTargetsCount > 0)) {
       if (naturalEnd || infiniteModeOn.checked) {
         saveCurrentSession();
       }
@@ -2726,6 +2785,7 @@ function nextStimulus() {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (!raw) return;
       const data = JSON.parse(raw);
+
       persistedInputs.forEach(s => {
         if (data[s.key] !== undefined && data[s.key] !== null) {
           s.el[s.prop] = data[s.key];
@@ -2767,9 +2827,9 @@ function nextStimulus() {
       autoProgressionControls.style.display = 'none';
     }
     
-    apWinThresholdLabel.textContent = `When >= ${apWinThreshold.value}%`;
+    apWinThresholdLabel.textContent = `When d' >= ${parseFloat(apWinThreshold.value).toFixed(1)}`;
     apWinStreakLabel.textContent = `Win after: ${apWinStreak.value} in a row`;
-    apLoseThresholdLabel.textContent = `When < ${apLoseThreshold.value}%`;
+    apLoseThresholdLabel.textContent = `When d' < ${parseFloat(apLoseThreshold.value).toFixed(1)}`;
     apLoseStreakLabel.textContent = `Lose after: ${apLoseStreak.value} in a row`;
 
     updateSliderBackground(apWinThreshold);
@@ -2807,18 +2867,17 @@ function nextStimulus() {
     if (!autoProgressionOn.checked) return;
 
     if (expected.size) {
-      total += expected.size;
       expected.clear();
     }
     
-    const finalAccuracy = total ? Math.round((correct / total) * 100) : 0;
+    const dp = calculateDPrime();
     
-    const winThresh = +apWinThreshold.value;
-    const winStreakReq = +apWinStreak.value;
-    const loseThresh = +apLoseThreshold.value;
-    const loseStreakReq = +apLoseStreak.value;
+    const winThresh = parseFloat(apWinThreshold.value);
+    const winStreakReq = parseInt(apWinStreak.value, 10);
+    const loseThresh = parseFloat(apLoseThreshold.value);
+    const loseStreakReq = parseInt(apLoseStreak.value, 10);
 
-    if (finalAccuracy >= winThresh) {
+    if (dp >= winThresh) {
       winStreakCount++;
       loseStreakCount = 0;
       if (winStreakCount >= winStreakReq) {
@@ -2829,7 +2888,7 @@ function nextStimulus() {
         winStreakCount = 0;
         showAutoProgressionToast(`Level Up! N increased to ${nValue.value}`);
       }
-    } else if (finalAccuracy < loseThresh) {
+    } else if (dp < loseThresh) {
       loseStreakCount++;
       winStreakCount = 0;
       if (loseStreakCount >= loseStreakReq) {
@@ -3204,27 +3263,27 @@ function nextStimulus() {
     return enabled;
   }
 
-  function getAccuracyClass(value) {
-    if (value >= 80) return 'good';
-    if (value >= 60) return 'mid';
+  function getDPrimeClass(dp) {
+    if (dp >= 2.5) return 'good';
+    if (dp >= 1.2) return 'mid';
     return 'bad';
   }
 
   function saveCurrentSession() {
-    if (!intervalCount || !total) {
+    if (!intervalCount || (targetsCount === 0 && nonTargetsCount === 0)) {
       return;
     }
 
     const historyData = loadSessionHistory();
-    const accuracy = Math.round((correct / total) * 100);
+    const dPrimeValue = parseFloat(calculateDPrime().toFixed(2));
     const duration = sessionStart ? Math.max(1, Math.round((Date.now() - sessionStart) / 1000)) : 0;
     const activeModes = getEnabledModalities();
 
     historyData.unshift({
       timestamp: Date.now(),
-      accuracy,
-      correct,
-      total,
+      dPrime: dPrimeValue,
+      correct: hits,
+      total: targetsCount + nonTargetsCount,
       trials: intervalCount,
       duration,
       n: Number(nValue.value),
@@ -3241,30 +3300,33 @@ function nextStimulus() {
     document.getElementById('statsSessionsValue').textContent = historyData.length;
 
     if (!historyData.length) {
-      document.getElementById('statsAccuracyValue').textContent = '0%';
-      document.getElementById('statsBestValue').textContent = '0%';
+      document.getElementById('statsAccuracyValue').textContent = '—';
+      document.getElementById('statsBestValue').textContent = '—';
       document.getElementById('statsMinutesValue').textContent = '0m';
       statsRecentBody.innerHTML = '<tr><td colspan="6"><div class="stats-empty">No completed sessions yet</div></td></tr>';
       return;
     }
 
-    const avgAccuracy = Math.round(historyData.reduce((sum, item) => sum + item.accuracy, 0) / historyData.length);
-    const bestAccuracy = Math.max(...historyData.map(item => item.accuracy));
+    const sumDPrime = historyData.reduce((sum, item) => sum + (item.dPrime || 0), 0);
+    const avgDPrime = (sumDPrime / historyData.length).toFixed(2);
+    
+    const bestDPrime = Math.max(...historyData.map(item => item.dPrime || 0)).toFixed(2);
     const totalMinutes = Math.round(historyData.reduce((sum, item) => sum + item.duration, 0) / 60);
 
-    document.getElementById('statsAccuracyValue').textContent = `${avgAccuracy}%`;
-    document.getElementById('statsBestValue').textContent = `${bestAccuracy}%`;
+    document.getElementById('statsAccuracyValue').textContent = avgDPrime;
+    document.getElementById('statsBestValue').textContent = bestDPrime;
     document.getElementById('statsMinutesValue').textContent = `${totalMinutes}m`;
 
     statsRecentBody.innerHTML = historyData.slice(0, 20).map(item => {
       const gameLabel = `${item.n}-Back · ${item.dimension}D`;
       const modalities = item.modalities.map(mode => `<span class="stats-chip">${mode}</span>`).join('');
+      const dp = item.dPrime || 0;
 
       return `
         <tr>
           <td class="muted">${formatSessionDate(item.timestamp)}</td>
           <td>${gameLabel}</td>
-          <td><span class="stats-pill ${getAccuracyClass(item.accuracy)}">${item.accuracy}%</span></td>
+          <td><span class="stats-pill ${getDPrimeClass(dp)}">d': ${dp.toFixed(2)}</span></td>
           <td>${item.trials}</td>
           <td><div class="stats-modalities">${modalities}</div></td>
           <td class="muted">${formatSessionDuration(item.duration)}</td>
@@ -3338,8 +3400,8 @@ function nextStimulus() {
     ctx.strokeStyle = 'rgba(120, 160, 230, 0.12)';
     ctx.lineWidth = 1;
 
-    for (let step = 0; step <= 5; step++) {
-      const y = padding.top + ((height - padding.top - padding.bottom) / 5) * step;
+    for (let step = 0; step <= 4; step++) {
+      const y = padding.top + ((height - padding.top - padding.bottom) / 4) * step;
 
       ctx.beginPath();
       ctx.moveTo(padding.left, y);
@@ -3354,7 +3416,9 @@ function nextStimulus() {
 
     chartData.forEach((item, index) => {
       const x = padding.left + (usableWidth / Math.max(chartData.length - 1, 1)) * index;
-      const y = padding.top + usableHeight - (item.accuracy / 100) * usableHeight;
+      const dp = item.dPrime || 0;
+      const clampedDp = Math.max(0, Math.min(4.0, dp));
+      const y = padding.top + usableHeight - (clampedDp / 4.0) * usableHeight;
 
       if (index === 0) {
         ctx.moveTo(x, y);
@@ -3372,7 +3436,9 @@ function nextStimulus() {
 
     chartData.forEach((item, index) => {
       const x = padding.left + (usableWidth / Math.max(chartData.length - 1, 1)) * index;
-      const y = padding.top + usableHeight - (item.accuracy / 100) * usableHeight;
+      const dp = item.dPrime || 0;
+      const clampedDp = Math.max(0, Math.min(4.0, dp));
+      const y = padding.top + usableHeight - (clampedDp / 4.0) * usableHeight;
 
       ctx.beginPath();
       ctx.arc(x, y, 4, 0, Math.PI * 2);
@@ -3382,16 +3448,16 @@ function nextStimulus() {
       ctx.fillStyle = '#8a94b8';
       ctx.font = '11px Inter, system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`${item.accuracy}%`, x, y - 12);
+      ctx.fillText(dp.toFixed(2), x, y - 12);
     });
 
     ctx.fillStyle = '#4a5478';
     ctx.font = '11px Inter, system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'right';
 
-    [100, 80, 60, 40, 20, 0].forEach((value, index) => {
-      const y = padding.top + ((height - padding.top - padding.bottom) / 5) * index + 4;
-      ctx.fillText(`${value}%`, padding.left - 8, y);
+    ['4.0', '3.0', '2.0', '1.0', '0.0'].forEach((value, index) => {
+      const y = padding.top + ((height - padding.top - padding.bottom) / 4) * index + 4;
+      ctx.fillText(value, padding.left - 8, y);
     });
   }
 
