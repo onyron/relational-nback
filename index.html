@@ -2124,8 +2124,7 @@
   function getRotationTempo() {
     const seconds = parseFloat(rotationSpeed.value);
     const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : ROTATION_DEFAULT_SECONDS;
-    // Keep the setting meaningful while preventing nausea-inducing extremes.
-    return Math.min(2.85, Math.max(0.22, ROTATION_DEFAULT_SECONDS / safeSeconds));
+    return Math.min(2.85, Math.max(0.02, ROTATION_DEFAULT_SECONDS / safeSeconds));
   }
 
   function wrapDegrees(degrees) {
@@ -2215,6 +2214,9 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       stopSmartRotation();
+      if (interval) {
+        stopGame();
+      }
     } else {
       // Resume on a fresh non-memorized segment instead of continuing a stale loop.
       reseedRotationPath('visibility-resume');
@@ -2387,8 +2389,10 @@
     feedbackToast.classList.remove('visible');
   }
 
-  function nextStimulus() {
+function nextStimulus() {
     currentIntervalResponses.clear();
+
+    const n = +nValue.value;
 
     const missed = [...expected];
     const wrong = [...falseAlarms];
@@ -2450,7 +2454,11 @@
       cell.querySelectorAll('.cell-face').forEach(f => f.style.fontSize = `${size}px`);
     }
 
-    history.push({ cellIndex, sound, color, shape, size });
+    history.push({ cellIndex, cell, sound, color, shape, size });
+
+    if (history.length > n + 1) {
+      history.shift();
+    }
 
     const duration = Math.max(50, +intervalMs.value - +isiMs.value);
 
@@ -2464,7 +2472,6 @@
       }
     }, duration);
 
-    const n = +nValue.value;
     if (history.length > n) {
       const a = history[history.length - 1 - n];
       const b = history[history.length - 1];
@@ -3309,8 +3316,8 @@
     ctx.strokeStyle = 'rgba(120, 160, 230, 0.12)';
     ctx.lineWidth = 1;
 
-    for (let step = 0; step <= 4; step++) {
-      const y = padding.top + ((height - padding.top - padding.bottom) / 4) * step;
+    for (let step = 0; step <= 5; step++) {
+      const y = padding.top + ((height - padding.top - padding.bottom) / 5) * step;
 
       ctx.beginPath();
       ctx.moveTo(padding.left, y);
@@ -3325,7 +3332,7 @@
 
     chartData.forEach((item, index) => {
       const x = padding.left + (usableWidth / Math.max(chartData.length - 1, 1)) * index;
-      const y = padding.top + usableHeight - ((item.accuracy - 40) / 60) * usableHeight;
+      const y = padding.top + usableHeight - (item.accuracy / 100) * usableHeight;
 
       if (index === 0) {
         ctx.moveTo(x, y);
@@ -3343,7 +3350,7 @@
 
     chartData.forEach((item, index) => {
       const x = padding.left + (usableWidth / Math.max(chartData.length - 1, 1)) * index;
-      const y = padding.top + usableHeight - ((item.accuracy - 40) / 60) * usableHeight;
+      const y = padding.top + usableHeight - (item.accuracy / 100) * usableHeight;
 
       ctx.beginPath();
       ctx.arc(x, y, 4, 0, Math.PI * 2);
@@ -3360,8 +3367,8 @@
     ctx.font = '11px Inter, system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'right';
 
-    [100, 85, 70, 55, 40].forEach((value, index) => {
-      const y = padding.top + ((height - padding.top - padding.bottom) / 4) * index + 4;
+    [100, 80, 60, 40, 20, 0].forEach((value, index) => {
+      const y = padding.top + ((height - padding.top - padding.bottom) / 5) * index + 4;
       ctx.fillText(`${value}%`, padding.left - 8, y);
     });
   }
@@ -3466,9 +3473,6 @@
   }
 </script>
 
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"850354c52aa4489fbe2aab7efa2c1124","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"850354c52aa4489fbe2aab7efa2c1124","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
