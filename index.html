@@ -1365,7 +1365,8 @@
 
     .stats-heatmap {
       display: grid;
-      grid-template-columns: repeat(17, 1fr);
+      grid-template-rows: repeat(7, 1fr);
+      grid-auto-flow: column;
       gap: 5px;
     }
 
@@ -1966,7 +1967,13 @@
             <h3>Consistency</h3>
           </div>
 
-          <div class="stats-heatmap" id="statsHeatmap"></div>
+          <div class="stats-heatmap-container" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
+            <div id="statsHeatmapMonths" style="display: grid; grid-template-columns: repeat(17, 1fr); margin-left: 24px; height: 16px; align-items: end;"></div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <div id="statsHeatmapWeekdays" style="display: grid; grid-template-rows: repeat(7, 1fr); height: 114px; font-size: 10px; color: var(--text-faint); text-transform: uppercase; width: 16px; text-align: right; align-items: center; line-height: 1;"></div>
+              <div class="stats-heatmap" id="statsHeatmap" style="height: 114px; flex: 1;"></div>
+            </div>
+          </div>
 
           <div class="stats-legend">
             <span>Less</span>
@@ -3415,12 +3422,54 @@ if (dp >= winThresh) {
       counts.set(key, (counts.get(key) || 0) + 1);
     });
 
-    const days = [];
     const today = new Date();
+    
+    const currentDayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1;
+    
+    const mondayOfCurrentWeek = new Date(today.getTime() - currentDayOfWeek * 24 * 60 * 60 * 1000);
+    const startDate = new Date(mondayOfCurrentWeek.getTime() - 16 * 7 * 24 * 60 * 60 * 1000);
+    startDate.setHours(0, 0, 0, 0);
 
-    for (let i = 118; i >= 0; i--) {
-      const current = new Date(today);
-      current.setDate(today.getDate() - i);
+    const weekdaysEl = document.getElementById('statsHeatmapWeekdays');
+    if (weekdaysEl) {
+      const getWeekdayName = (dayOffset) => {
+        const d = new Date(2026, 4, 24 + dayOffset);
+        return d.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 3);
+      };
+
+      weekdaysEl.innerHTML = `
+        <span></span>
+        <span>${getWeekdayName(2)}</span>
+        <span></span>
+        <span>${getWeekdayName(4)}</span>
+        <span></span>
+        <span>${getWeekdayName(6)}</span>
+        <span></span>
+      `;
+    }
+
+    const monthsEl = document.getElementById('statsHeatmapMonths');
+    if (monthsEl) {
+      const monthsHtml = [];
+      let lastMonthName = '';
+
+      for (let w = 0; w < 17; w++) {
+        const weekStartDate = new Date(startDate.getTime() + w * 7 * 24 * 60 * 60 * 1000);
+        const monthName = weekStartDate.toLocaleDateString(undefined, { month: 'short' });
+        
+        if (monthName !== lastMonthName) {
+          monthsHtml.push(`<div style="font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; text-align: left; overflow: visible; white-space: nowrap;">${monthName}</div>`);
+          lastMonthName = monthName;
+        } else {
+          monthsHtml.push('<div></div>');
+        }
+      }
+      monthsEl.innerHTML = monthsHtml.join('');
+    }
+
+    const days = [];
+    for (let i = 0; i < 119; i++) {
+      const current = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
       const key = current.toISOString().slice(0, 10);
       const value = counts.get(key) || 0;
 
@@ -3430,7 +3479,12 @@ if (dp >= winThresh) {
       else if (value >= 3) level = 'l2';
       else if (value >= 1) level = 'l1';
 
-      days.push(`<div class="stats-heatmap-day ${level}" title="${key} · ${value} sessions"></div>`);
+      const isFuture = current.getTime() > today.getTime();
+      const titleAttr = isFuture ? 'Future' : `${key} · ${value} sessions`;
+      const levelClass = isFuture ? '' : level;
+      const opacityStyle = isFuture ? 'opacity: 0.15;' : '';
+
+      days.push(`<div class="stats-heatmap-day ${levelClass}" style="${opacityStyle}" title="${titleAttr}"></div>`);
     }
 
     statsHeatmap.innerHTML = days.join('');
@@ -3529,6 +3583,36 @@ if (dp >= winThresh) {
     ['4.0', '3.0', '2.0', '1.0', '0.0'].forEach((value, index) => {
       const y = padding.top + ((height - padding.top - padding.bottom) / 4) * index + 4;
       ctx.fillText(value, padding.left - 8, y);
+    });
+
+    ctx.fillStyle = '#8a94b8';
+    ctx.font = '10px Inter, system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+
+    chartData.forEach((item, index) => {
+      const x = padding.left + (usableWidth / Math.max(chartData.length - 1, 1)) * index;
+      
+      const date = new Date(item.timestamp);
+      const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      
+      let drawLabel = false;
+      if (chartData.length <= 8) {
+        drawLabel = true;
+      } else if (chartData.length <= 14) {
+        drawLabel = (index % 2 === 0);
+      } else {
+        drawLabel = (index % 3 === 0) || (index === chartData.length - 1);
+      }
+      
+      if (drawLabel) {
+        ctx.strokeStyle = 'rgba(120, 160, 230, 0.2)';
+        ctx.beginPath();
+        ctx.moveTo(x, padding.top + usableHeight);
+        ctx.lineTo(x, padding.top + usableHeight + 4);
+        ctx.stroke();
+
+        ctx.fillText(dateStr, x, padding.top + usableHeight + 16);
+      }
     });
   }
 
