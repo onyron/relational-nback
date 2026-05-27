@@ -2155,6 +2155,21 @@
     size: 'Size'
   };
 
+  const opposites = {
+    'north': 'south',
+    'south': 'north',
+    'east': 'west',
+    'west': 'east',
+    'above': 'below',
+    'below': 'above',
+    'char-north': 'char-south',
+    'char-south': 'char-north',
+    'char-east': 'char-west',
+    'char-west': 'char-east',
+    'char-higher': 'char-lower',
+    'char-lower': 'char-higher'
+  };
+
   let sessionStart = null;
   let minutesToday = 0;
 
@@ -2634,6 +2649,12 @@ function nextStimulus() {
     if (['char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'].includes(type) && !shapeOn.checked) return;
     if (type === 'size' && !sizeOn.checked) return;
     if (currentIntervalResponses.has(type)) return;
+
+    const opp = opposites[type];
+    if (opp && currentIntervalResponses.has(opp)) {
+      return; 
+    }
+
     currentIntervalResponses.add(type);
 
     const n = +nValue.value;
