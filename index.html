@@ -2738,10 +2738,12 @@ function nextStimulus() {
     }
 
     if (sessionStart) {
-      minutesToday += (Date.now() - sessionStart) / 60000;
+      if (naturalEnd || infiniteModeOn.checked) {
+        minutesToday += (Date.now() - sessionStart) / 60000;
+        saveMinutesToday();
+        minutesEl.textContent = Math.floor(minutesToday);
+      }
       sessionStart = null;
-      minutesEl.textContent = Math.floor(minutesToday);
-      saveMinutesToday();
     }
   }
 
