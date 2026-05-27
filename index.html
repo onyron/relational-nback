@@ -231,6 +231,7 @@
       width: 100%;
       height: 100%;
       transform-style: preserve-3d;
+      will-change: transform;
     }
 
     .cell {
@@ -238,6 +239,7 @@
       top: 0;
       left: 0;
       transform-style: preserve-3d;
+      will-change: transform;
     }
 
     .cell-face {
@@ -253,7 +255,8 @@
       font-weight: 700;
       color: var(--text);
       user-select: none;
-      transition: background 0.1s;
+      transition: background-color 0.1s ease, box-shadow 0.1s ease;
+      -webkit-font-smoothing: antialiased;
     }
 
     .cell.active .cell-face {
@@ -323,7 +326,6 @@
       font-family: 'JetBrains Mono', ui-monospace, monospace;
       white-space: nowrap;
       line-height: 1;
-      backdrop-filter: blur(2px);
     }
     .axis-label.x {
       color: #fecaca;
@@ -2103,6 +2105,13 @@
   const TAU = Math.PI * 2;
   const GOLDEN_RATIO = 1.618033988749895;
 
+  let cachedRotationTempo = 1.0;
+  function updateRotationTempoCache() {
+    const seconds = parseFloat(rotationSpeed.value);
+    const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : ROTATION_DEFAULT_SECONDS;
+    cachedRotationTempo = Math.min(18.0, Math.max(0.02, ROTATION_DEFAULT_SECONDS / safeSeconds));
+  }
+
   const rotationRuntime = {
     rafId: null,
     startedAt: performance.now(),
@@ -2139,9 +2148,7 @@
   }
 
   function getRotationTempo() {
-    const seconds = parseFloat(rotationSpeed.value);
-    const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : ROTATION_DEFAULT_SECONDS;
-    return Math.min(18.0, Math.max(0.02, ROTATION_DEFAULT_SECONDS / safeSeconds));
+    return cachedRotationTempo;
   }
 
   function wrapDegrees(degrees) {
@@ -2212,7 +2219,7 @@ function computeSmartRotation(now) {
 
   function animateSmartRotation(now) {
     const r = computeSmartRotation(now);
-    cubeWrapper.style.transform = `rotateX(${r.x.toFixed(3)}deg) rotateY(${r.y.toFixed(3)}deg) rotateZ(${r.z.toFixed(3)}deg)`;
+    cubeWrapper.style.transform = `rotateX(${r.x.toFixed(3)}deg) rotateY(${r.y.toFixed(3)}deg) rotateZ(${r.z.toFixed(3)}deg) translate3d(0, 0, 0)`;
     rotationRuntime.rafId = requestAnimationFrame(animateSmartRotation);
   }
 
@@ -2262,7 +2269,7 @@ function computeSmartRotation(now) {
   cubeSize.oninput = applyCubeSize;
   cubeSize.onchange = applyCubeSize;
   rotationSpeed.oninput = () => {
-    // The adaptive rotation engine reads this live each animation frame.
+    updateRotationTempoCache();
     saveSettings();
   };
 
@@ -2724,6 +2731,7 @@ function nextStimulus() {
           s.el[s.prop] = data[s.key];
         }
       });
+      updateRotationTempoCache();
     } catch (e) {}
   }
 
@@ -2876,6 +2884,7 @@ function nextStimulus() {
   });
 
   loadSettings();
+  updateRotationTempoCache();
   loadMinutesToday();
   reseedRotationPath('initial-load');
   startSmartRotation();
