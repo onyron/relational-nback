@@ -221,14 +221,9 @@
       width: var(--cube-size);
       height: var(--cube-size);
       transform-style: preserve-3d;
-      animation: spin var(--spin-speed) linear infinite;
       transform-origin: center center;
       pointer-events: none;
-    }
-
-    @keyframes spin {
-      from { transform: rotateX(-30deg) rotateY(0deg); }
-      to   { transform: rotateX(330deg) rotateY(360deg); }
+      will-change: transform;
     }
 
     .grid-cube {
@@ -2083,6 +2078,150 @@
 
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+
+  // --- Adaptive anti-loop cube rotation ---
+  // Replaces the fixed CSS keyframe loop. The goal is not "random jitter", but
+  // high viewpoint coverage with smooth, hard-to-memorize motion across a session.
+  const ROTATION_DEFAULT_SECONDS = 18;
+  const TAU = Math.PI * 2;
+  const GOLDEN_RATIO = 1.618033988749895;
+
+  const rotationRuntime = {
+    rafId: null,
+    startedAt: performance.now(),
+    seed: 0,
+    phases: new Array(12).fill(0),
+    weights: new Array(8).fill(1),
+    nudge: { x: 0, y: 0, z: 0, start: 0, duration: 1 }
+  };
+
+  function mulberry32(seed) {
+    let t = seed >>> 0;
+    return function() {
+      t += 0x6D2B79F5;
+      let r = t;
+      r = Math.imul(r ^ (r >>> 15), r | 1);
+      r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function reseedRotationPath(reason = 'init') {
+    const entropy = (
+      Date.now() ^
+      Math.floor(Math.random() * 0xffffffff) ^
+      ((intervalCount + 1) * 0x9E3779B1)
+    ) >>> 0;
+
+    rotationRuntime.seed = entropy;
+    const rnd = mulberry32(entropy);
+    rotationRuntime.startedAt = performance.now() - rnd() * 9000;
+    rotationRuntime.phases = rotationRuntime.phases.map(() => rnd() * TAU);
+    rotationRuntime.weights = rotationRuntime.weights.map(() => 0.72 + rnd() * 0.62);
+    rotationRuntime.nudge = { x: 0, y: 0, z: 0, start: 0, duration: 1 };
+  }
+
+  function getRotationTempo() {
+    const seconds = parseFloat(rotationSpeed.value);
+    const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : ROTATION_DEFAULT_SECONDS;
+    // Keep the setting meaningful while preventing nausea-inducing extremes.
+    return Math.min(2.85, Math.max(0.22, ROTATION_DEFAULT_SECONDS / safeSeconds));
+  }
+
+  function wrapDegrees(degrees) {
+    const value = degrees % 360;
+    return value < 0 ? value + 360 : value;
+  }
+
+  function nudgeRotationOnStimulus(stimulusNumber) {
+    const rnd = mulberry32((rotationRuntime.seed ^ (stimulusNumber * 0x85EBCA6B)) >>> 0);
+    rotationRuntime.nudge = {
+      x: (rnd() - 0.5) * 12,
+      y: (rnd() - 0.5) * 18,
+      z: (rnd() - 0.5) * 10,
+      start: performance.now(),
+      duration: 1400 + rnd() * 900
+    };
+  }
+
+  function getRotationNudge(now) {
+    const n = rotationRuntime.nudge;
+    const elapsed = now - n.start;
+    if (!n.start || elapsed >= n.duration) return { x: 0, y: 0, z: 0 };
+
+    const u = Math.max(0, Math.min(1, elapsed / n.duration));
+    const falloff = Math.pow(1 - u, 2.35);
+    const softIn = Math.min(1, u * 5);
+    const amount = falloff * softIn;
+
+    return {
+      x: n.x * amount,
+      y: n.y * amount,
+      z: n.z * amount
+    };
+  }
+
+  function computeSmartRotation(now) {
+    const p = rotationRuntime.phases;
+    const w = rotationRuntime.weights;
+    const tempo = getRotationTempo();
+    const t = ((now - rotationRuntime.startedAt) / 1000) * tempo;
+
+    // Incommensurate frequencies + slow speed drift = no short practical loop.
+    const x = wrapDegrees(
+      t * (10.8 + 2.4 * Math.sin(t * 0.021 * GOLDEN_RATIO + p[0])) +
+      42 * Math.sin(t * 0.083 * Math.SQRT2 * w[0] + p[1]) +
+      18 * Math.sin(t * 0.017 * Math.PI * w[1] + p[2])
+    );
+
+    const y = wrapDegrees(
+      t * (16.9 + 3.2 * Math.sin(t * 0.027 * Math.sqrt(5) + p[3])) +
+      58 * Math.sin(t * 0.061 * Math.sqrt(3) * w[2] + p[4]) +
+      23 * Math.sin(t * 0.011 * Math.E * w[3] + p[5])
+    );
+
+    const z =
+      19 * Math.sin(t * 0.073 * Math.sqrt(7) * w[4] + p[6]) +
+      12 * Math.sin(t * 0.029 * GOLDEN_RATIO * w[5] + p[7]) +
+       7 * Math.sin(t * 0.009 * Math.PI * w[6] + p[8]);
+
+    const rollTrim = 4.5 * Math.sin(t * 0.41 * w[7] + p[9]) * Math.sin(t * 0.019 + p[10]);
+    const nudge = getRotationNudge(now);
+
+    return {
+      x: x + rollTrim + nudge.x,
+      y: y + nudge.y,
+      z: z - rollTrim * 0.55 + nudge.z
+    };
+  }
+
+  function animateSmartRotation(now) {
+    const r = computeSmartRotation(now);
+    cubeWrapper.style.transform = `rotateX(${r.x.toFixed(3)}deg) rotateY(${r.y.toFixed(3)}deg) rotateZ(${r.z.toFixed(3)}deg)`;
+    rotationRuntime.rafId = requestAnimationFrame(animateSmartRotation);
+  }
+
+  function startSmartRotation() {
+    if (rotationRuntime.rafId) return;
+    rotationRuntime.rafId = requestAnimationFrame(animateSmartRotation);
+  }
+
+  function stopSmartRotation() {
+    if (!rotationRuntime.rafId) return;
+    cancelAnimationFrame(rotationRuntime.rafId);
+    rotationRuntime.rafId = null;
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopSmartRotation();
+    } else {
+      // Resume on a fresh non-memorized segment instead of continuing a stale loop.
+      reseedRotationPath('visibility-resume');
+      startSmartRotation();
+    }
+  });
+
   function openSettings() {
     settingsPanel.classList.add('open');
     settingsBackdrop.classList.add('open');
@@ -2106,8 +2245,10 @@
   }
   cubeSize.oninput = applyCubeSize;
   cubeSize.onchange = applyCubeSize;
-  rotationSpeed.oninput = e =>
-    cubeWrapper.style.setProperty('--spin-speed', `${e.target.value}s`);
+  rotationSpeed.oninput = () => {
+    // The adaptive rotation engine reads this live each animation frame.
+    saveSettings();
+  };
 
   function renderCharReference() {
     charReferenceGrid.innerHTML = '';
@@ -2278,6 +2419,7 @@
     const cellIndex = Math.floor(Math.random()*cells.length);
     const cell = cells[cellIndex];
     cell.classList.add('active');
+    nudgeRotationOnStimulus(intervalCount + 1);
 
     let sound = null;
     let color = null;
@@ -2380,6 +2522,7 @@
     if (['char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'].includes(type) && !shapeOn.checked) return;
     if (type === 'size' && !sizeOn.checked) return;
     if (currentIntervalResponses.has(type)) return;
+    currentIntervalResponses.add(type);
 
     total++;
     if (expected.has(type)) {
@@ -2403,6 +2546,7 @@
     } else {
       closeSettingsFn();
       stopGame();
+      reseedRotationPath('game-start');
       document.body.classList.add('game-active');
       startBtn.innerHTML = '■ Stop';
       history = [];
@@ -2713,7 +2857,8 @@
 
   loadSettings();
   loadMinutesToday();
-  cubeWrapper.style.setProperty('--spin-speed', `${rotationSpeed.value}s`);
+  reseedRotationPath('initial-load');
+  startSmartRotation();
   document.documentElement.style.setProperty('--user-cube-size', `${cubeSize.value}px`);
   buildCube(+cubeDimension.value || 3);
   updateResponseConsoleVisibility();
@@ -3321,6 +3466,8 @@
   }
 </script>
 
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"850354c52aa4489fbe2aab7efa2c1124","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"850354c52aa4489fbe2aab7efa2c1124","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
