@@ -8,4 +8,4 @@ A highly customizable 3D Relational N-Back cognitive training console.
 ## 👥 Credits
 * **Concept (v1):** [@eeemind](https://github.com/eeemind)
 * **UI Layout (v2):** [@zerth1](https://github.com/zerth1)
-* **Features & Fixes (v3):** [@lowcased](https://github.com/lowcased)
+* **Features, Stats & UX (v3):** [@lowcased](https://github.com/lowcased)
