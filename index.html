@@ -1263,19 +1263,19 @@
 
     .stats-table th {
       text-align: left;
-      padding: 18px 20px;
+      padding: 12px 14px;
       font-size: 11px;
       color: var(--text-dim);
       text-transform: uppercase;
-      letter-spacing: 0.14em;
+      letter-spacing: 0.12em;
       font-weight: 600;
       border-bottom: 1px solid rgba(120, 160, 230, 0.08);
     }
 
     .stats-table td {
-      padding: 18px 20px;
+      padding: 12px 14px;
       border-bottom: 1px solid rgba(120, 160, 230, 0.06);
-      font-size: 14px;
+      font-size: 13px;
       color: var(--text);
       vertical-align: middle;
     }
@@ -2082,7 +2082,8 @@
             <tr>
               <th>Date</th>
               <th>Game</th>
-              <th>d'</th>
+              <th>CPI</th>
+              <th>Overall d'</th>
               <th>Trials</th>
               <th>Modalities</th>
               <th>Time</th>
@@ -3684,22 +3685,39 @@ if (dp >= winThresh) {
 
     statsRecentBody.innerHTML = historyData.slice(0, 20).map(item => {
       const gameLabel = `${item.n}-Back · ${item.dimension}×${item.dimension}×${item.dimension}`;
-      const modalities = item.modalities.map(mode => `<span class="stats-chip">${mode}</span>`).join('');
+      
       const dp = item.dPrime || 0;
       const cpi = calculateCPI(dp, item.n || 1, item.modalities);
+
+      const modalities = item.modalities.map(mode => {
+        let modDPrimeStr = '';
+        if (item.modalityStats && item.modalityStats[mode]) {
+          const stats = item.modalityStats[mode];
+          const modDP = calculateModalityDPrime(stats.hits, stats.falseAlarms, stats.targets, stats.nonTargets);
+          if (modDP !== null) {
+            modDPrimeStr = ` · ${modDP.toFixed(1)}`;
+          }
+        }
+        return `<span class="stats-chip">${mode}${modDPrimeStr}</span>`;
+      }).join('');
 
       return `
         <tr>
           <td class="muted">${formatSessionDate(item.timestamp)}</td>
-          <td>${gameLabel}</td>
+          <td style="white-space: nowrap;">${gameLabel}</td>
+          <td>
+            <span class="stats-pill" style="background: rgba(110, 231, 255, 0.08); color: var(--accent); border: 1px solid rgba(110, 231, 255, 0.25); white-space: nowrap;">
+              ${cpi.toFixed(2)}
+            </span>
+          </td>
           <td>
             <span class="stats-pill ${getDPrimeClass(dp)}" style="white-space: nowrap;">
-              CPI: ${cpi.toFixed(2)} <span style="font-size: 10px; opacity: 0.8; margin-left: 4px;">(d': ${dp.toFixed(2)})</span>
+              ${dp.toFixed(2)}
             </span>
           </td>
           <td>${item.trials}</td>
           <td><div class="stats-modalities">${modalities}</div></td>
-          <td class="muted">${formatSessionDuration(item.duration)}</td>
+          <td class="muted" style="white-space: nowrap;">${formatSessionDuration(item.duration)}</td>
         </tr>
       `;
     }).join('');
