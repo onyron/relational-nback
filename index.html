@@ -1337,7 +1337,7 @@
 
     .stats-progress-grid {
       display: grid;
-      grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+      grid-template-columns: 1fr;
       gap: 18px;
     }
 
@@ -1363,16 +1363,78 @@
       color: var(--text-dim);
     }
 
+    .stats-heatmap-container {
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .stats-heatmap-scroll {
+      width: max-content;
+      min-width: 880px;
+      margin: 0 auto;
+    }
+
+    .stats-heatmap-years,
+    .stats-heatmap-months {
+      display: grid;
+      grid-template-columns: repeat(53, 16px);
+      margin-left: 36px;
+      align-items: end;
+    }
+
+    .stats-heatmap-years {
+      height: 16px;
+      margin-bottom: 2px;
+    }
+
+    .stats-heatmap-months {
+      height: 16px;
+      margin-bottom: 6px;
+    }
+
+    .stats-heatmap-year,
+    .stats-heatmap-month {
+      font-size: 10px;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-align: left;
+      overflow: visible;
+      white-space: nowrap;
+    }
+
+    .stats-heatmap-body {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .stats-heatmap-weekdays {
+      display: grid;
+      grid-template-rows: repeat(7, 12px);
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      width: 28px;
+      text-align: right;
+      align-items: center;
+      line-height: 1;
+      padding-right: 4px;
+    }
+
     .stats-heatmap {
       display: grid;
-      grid-template-rows: repeat(7, 1fr);
+      grid-template-rows: repeat(7, 12px);
+      grid-auto-columns: 12px;
       grid-auto-flow: column;
-      gap: 5px;
+      gap: 4px;
     }
 
     .stats-heatmap-day {
-      aspect-ratio: 1;
-      border-radius: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
       background: rgba(255,255,255,0.04);
       border: 1px solid rgba(120, 160, 230, 0.06);
     }
@@ -1971,11 +2033,14 @@
             <h3>Consistency</h3>
           </div>
 
-          <div class="stats-heatmap-container" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
-            <div id="statsHeatmapMonths" style="display: grid; grid-template-columns: repeat(17, 1fr); margin-left: 36px; height: 16px; align-items: end;"></div>
-            <div style="display: flex; gap: 8px; align-items: stretch;">
-              <div id="statsHeatmapWeekdays" style="display: grid; grid-template-rows: repeat(7, 1fr); gap: 5px; font-size: 10px; color: var(--text-faint); text-transform: uppercase; width: 28px; text-align: right; align-items: center; line-height: 1; padding-right: 4px;"></div>
-              <div class="stats-heatmap" id="statsHeatmap" style="flex: 1;"></div>
+          <div class="stats-heatmap-container">
+            <div class="stats-heatmap-scroll">
+              <div id="statsHeatmapYears" class="stats-heatmap-years"></div>
+              <div id="statsHeatmapMonths" class="stats-heatmap-months"></div>
+              <div class="stats-heatmap-body">
+                <div id="statsHeatmapWeekdays" class="stats-heatmap-weekdays"></div>
+                <div class="stats-heatmap" id="statsHeatmap"></div>
+              </div>
             </div>
           </div>
 
@@ -3302,7 +3367,7 @@ if (dp >= winThresh) {
 
   function saveSessionHistory(historyData) {
     try {
-      localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(historyData.slice(0, 160)));
+      localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(historyData.slice(0, 2000)));
     } catch (e) {}
   }
 
@@ -3417,27 +3482,36 @@ if (dp >= winThresh) {
     }).join('');
   }
 
+  function getLocalDateKey(value) {
+    const date = new Date(value);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
   function renderHeatmap() {
     const historyData = loadSessionHistory();
     const counts = new Map();
 
     historyData.forEach(item => {
-      const key = new Date(item.timestamp).toISOString().slice(0, 10);
+      const key = getLocalDateKey(item.timestamp);
       counts.set(key, (counts.get(key) || 0) + (item.duration || 0));
     });
 
     const today = new Date();
-    
+    today.setHours(23, 59, 59, 999);
+
+    const weeksToShow = 53;
+    const daysToShow = weeksToShow * 7;
     const currentSundayOffset = today.getDay();
     const sundayOfCurrentWeek = new Date(today.getTime() - currentSundayOffset * 24 * 60 * 60 * 1000);
-    
-    const startDate = new Date(sundayOfCurrentWeek.getTime() - 16 * 7 * 24 * 60 * 60 * 1000);
+    sundayOfCurrentWeek.setHours(0, 0, 0, 0);
+
+    const startDate = new Date(sundayOfCurrentWeek.getTime() - (weeksToShow - 1) * 7 * 24 * 60 * 60 * 1000);
     startDate.setHours(0, 0, 0, 0);
 
     const weekdaysEl = document.getElementById('statsHeatmapWeekdays');
     if (weekdaysEl) {
       const getWeekdayName = (dayOffset) => {
-        const d = new Date(2026, 4, 24 + dayOffset);
+        const d = new Date(startDate.getTime() + dayOffset * 24 * 60 * 60 * 1000);
         return d.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 3);
       };
 
@@ -3452,29 +3526,70 @@ if (dp >= winThresh) {
       `;
     }
 
-    const monthsEl = document.getElementById('statsHeatmapMonths');
-    if (monthsEl) {
-      const monthsHtml = [];
-      let lastMonthName = '';
-
-      for (let w = 0; w < 17; w++) {
+    const yearsEl = document.getElementById('statsHeatmapYears');
+    if (yearsEl) {
+      const yearPositions = [];
+      let lastYearName = '';
+      for (let w = 0; w < weeksToShow; w++) {
         const weekStartDate = new Date(startDate.getTime() + w * 7 * 24 * 60 * 60 * 1000);
-        const monthName = weekStartDate.toLocaleDateString(undefined, { month: 'short' });
-        
-        if (monthName !== lastMonthName) {
-          monthsHtml.push(`<div style="font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; text-align: left; overflow: visible; white-space: nowrap;">${monthName}</div>`);
-          lastMonthName = monthName;
-        } else {
-          monthsHtml.push('<div></div>');
+        const yearName = String(weekStartDate.getFullYear());
+        if (yearName !== lastYearName) {
+          yearPositions.push({ index: w, name: yearName });
+          lastYearName = yearName;
         }
       }
+
+      const filteredYears = [];
+      for (let i = 0; i < yearPositions.length; i++) {
+        const current = yearPositions[i];
+        const next = yearPositions[i + 1];
+        if (next && (next.index - current.index < 10)) {
+          continue;
+        }
+        filteredYears.push(current);
+      }
+
+      const yearsHtml = new Array(weeksToShow).fill('<div></div>');
+      filteredYears.forEach(y => {
+        yearsHtml[y.index] = `<div class="stats-heatmap-year">${y.name}</div>`;
+      });
+      yearsEl.innerHTML = yearsHtml.join('');
+    }
+
+    const monthsEl = document.getElementById('statsHeatmapMonths');
+    if (monthsEl) {
+      const monthPositions = [];
+      let lastMonthName = '';
+      for (let w = 0; w < weeksToShow; w++) {
+        const weekStartDate = new Date(startDate.getTime() + w * 7 * 24 * 60 * 60 * 1000);
+        const monthName = weekStartDate.toLocaleDateString(undefined, { month: 'short' });
+        if (monthName !== lastMonthName) {
+          monthPositions.push({ index: w, name: monthName });
+          lastMonthName = monthName;
+        }
+      }
+
+      const filteredMonths = [];
+      for (let i = 0; i < monthPositions.length; i++) {
+        const current = monthPositions[i];
+        const next = monthPositions[i + 1];
+        if (next && (next.index - current.index < 3)) {
+          continue;
+        }
+        filteredMonths.push(current);
+      }
+
+      const monthsHtml = new Array(weeksToShow).fill('<div></div>');
+      filteredMonths.forEach(m => {
+        monthsHtml[m.index] = `<div class="stats-heatmap-month">${m.name}</div>`;
+      });
       monthsEl.innerHTML = monthsHtml.join('');
     }
 
     const days = [];
-    for (let i = 0; i < 119; i++) {
+    for (let i = 0; i < daysToShow; i++) {
       const current = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
-      const key = current.toISOString().slice(0, 10);
+      const key = getLocalDateKey(current);
       
       const totalSeconds = counts.get(key) || 0;
       const totalMinutes = totalSeconds / 60;
@@ -3520,17 +3635,44 @@ if (dp >= winThresh) {
 
     ctx.clearRect(0, 0, width, height);
 
-    const historyData = loadSessionHistory().slice().reverse();
+    const historyData = loadSessionHistory();
+    const daily = new Map();
 
-    if (!historyData.length) {
+    historyData.forEach(item => {
+      const key = getLocalDateKey(item.timestamp);
+      if (!daily.has(key)) {
+        const date = new Date(item.timestamp);
+        date.setHours(0, 0, 0, 0);
+        daily.set(key, {
+          key,
+          timestamp: date.getTime(),
+          dPrimeTotal: 0,
+          sessions: 0
+        });
+      }
+
+      const day = daily.get(key);
+      day.dPrimeTotal += item.dPrime || 0;
+      day.sessions++;
+    });
+
+    const chartData = Array.from(daily.values())
+      .map(item => ({
+        key: item.key,
+        timestamp: item.timestamp,
+        dPrime: item.sessions ? item.dPrimeTotal / item.sessions : 0,
+        sessions: item.sessions
+      }))
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .slice(-30);
+
+    if (!chartData.length) {
       ctx.fillStyle = '#4a5478';
       ctx.font = '12px Inter, system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('No completed sessions yet', width / 2, height / 2);
       return;
     }
-
-    const chartData = historyData.slice(-18);
 
     const padding = {
       top: 20,
@@ -3556,8 +3698,15 @@ if (dp >= winThresh) {
 
     ctx.beginPath();
 
+    const getChartX = (index) => {
+      if (chartData.length === 1) {
+        return padding.left + usableWidth / 2;
+      }
+      return padding.left + (usableWidth / (chartData.length - 1)) * index;
+    };
+
     chartData.forEach((item, index) => {
-      const x = padding.left + (usableWidth / Math.max(chartData.length - 1, 1)) * index;
+      const x = getChartX(index);
       const dp = item.dPrime || 0;
       const clampedDp = Math.max(0, Math.min(4.0, dp));
       const y = padding.top + usableHeight - (clampedDp / 4.0) * usableHeight;
@@ -3577,7 +3726,7 @@ if (dp >= winThresh) {
     ctx.shadowBlur = 0;
 
     chartData.forEach((item, index) => {
-      const x = padding.left + (usableWidth / Math.max(chartData.length - 1, 1)) * index;
+      const x = getChartX(index);
       const dp = item.dPrime || 0;
       const clampedDp = Math.max(0, Math.min(4.0, dp));
       const y = padding.top + usableHeight - (clampedDp / 4.0) * usableHeight;
@@ -3607,7 +3756,7 @@ if (dp >= winThresh) {
     ctx.textAlign = 'center';
 
     chartData.forEach((item, index) => {
-      const x = padding.left + (usableWidth / Math.max(chartData.length - 1, 1)) * index;
+      const x = getChartX(index);
       
       const date = new Date(item.timestamp);
       const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
