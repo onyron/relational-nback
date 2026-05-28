@@ -3683,7 +3683,7 @@ if (dp >= winThresh) {
     }
 
     statsRecentBody.innerHTML = historyData.slice(0, 20).map(item => {
-      const gameLabel = `${item.n}-Back · ${item.dimension}D`;
+      const gameLabel = `${item.n}-Back · ${item.dimension}×${item.dimension}×${item.dimension}`;
       const modalities = item.modalities.map(mode => `<span class="stats-chip">${mode}</span>`).join('');
       const dp = item.dPrime || 0;
       const cpi = calculateCPI(dp, item.n || 1, item.modalities);
