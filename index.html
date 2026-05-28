@@ -1605,8 +1605,8 @@
       content: "CPI (Cognitive Performance Index) = d' × N × Sum of modality weights.Reflects actual workload: higher levels of N and the addition of new modalities increase this score, even if net accuracy d' temporarily decreases.";
       position: absolute;
       bottom: 130%;
-      left: 50%;
-      transform: translateX(-50%);
+      right: 0;
+      left: auto;
       background: var(--panel-hi);
       border: 1px solid var(--border);
       color: var(--text);
@@ -1627,7 +1627,7 @@
     }
     .cpi-tooltip-trigger:hover::after {
       opacity: 1;
-      transform: translateX(-50%) translateY(-4px);
+      transform: translateY(-4px);
     }
   </style>
 </head>
