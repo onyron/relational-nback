@@ -2734,11 +2734,6 @@ function nextStimulus() {
     const wrong = [...falseAlarms];
 
     const maxTrials = +numTrials.value;
-    if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
-      checkAutoProgression();
-      stopGame(true);
-      return;
-    }
 
     const showFb = (feedbackMode.value === 'show' || feedbackMode.value === 'hideCounter');
     if (showFb && (missed.length || wrong.length)) {
@@ -2856,6 +2851,11 @@ function nextStimulus() {
 
     intervalCount++;
     intervalCountEl.textContent = intervalCount;
+    if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
+      checkAutoProgression();
+      stopGame(true);
+      return;
+    }
   }
 
   function updateAccuracy() {
