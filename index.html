@@ -2292,7 +2292,9 @@
         }
       };
     `], { type: 'application/javascript' });
-    timerWorker = new Worker(URL.createObjectURL(blob));
+    const url = URL.createObjectURL(blob);
+    timerWorker = new Worker(url);
+    URL.revokeObjectURL(url); 
     timerWorker.onmessage = function(e) {
       if (e.data.type === 'stimulus') {
         nextStimulus();
