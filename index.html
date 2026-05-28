@@ -2852,8 +2852,9 @@ function nextStimulus() {
     intervalCount++;
     intervalCountEl.textContent = intervalCount;
     if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
+      const currentN = Number(nValue.value);
       checkAutoProgression();
-      stopGame(true);
+      stopGame(true, currentN);
       return;
     }
   }
@@ -2950,7 +2951,7 @@ function nextStimulus() {
     }
   };
 
-  function stopGame(naturalEnd = false) {
+  function stopGame(naturalEnd = false, playedN = null) {
     document.body.classList.remove('game-active');
     startBtn.innerHTML = '▶ Play';
 
@@ -2975,7 +2976,7 @@ function nextStimulus() {
 
     if (sessionStart && intervalCount > 0 && (targetsCount > 0 || nonTargetsCount > 0)) {
       if (naturalEnd || infiniteModeOn.checked) {
-        saveCurrentSession();
+        saveCurrentSession(playedN);
       }
     }
 
@@ -3561,7 +3562,7 @@ if (dp >= winThresh) {
     return 'bad';
   }
 
-  function saveCurrentSession() {
+  function saveCurrentSession(overrideN = null) {
     if (!intervalCount || (targetsCount === 0 && nonTargetsCount === 0)) {
       return;
     }
@@ -3578,7 +3579,7 @@ if (dp >= winThresh) {
       total: targetsCount + nonTargetsCount,
       trials: intervalCount,
       duration,
-      n: Number(nValue.value),
+      n: overrideN !== null ? overrideN : Number(nValue.value),
       dimension: Number(cubeDimension.value),
       modalities: activeModes,
       modalityStats: JSON.parse(JSON.stringify(modalityStats))
