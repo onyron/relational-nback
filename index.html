@@ -2840,6 +2840,24 @@ function nextStimulus() {
     if (type === 'size' && !sizeOn.checked) return;
     if (currentIntervalResponses.has(type)) return;
 
+    const directions = ['north', 'south', 'east', 'west', 'above', 'below'];
+    if (type === 'position') {
+      const hasDirection = directions.some(d => currentIntervalResponses.has(d));
+      if (hasDirection) return;
+    }
+    if (directions.includes(type)) {
+      if (currentIntervalResponses.has('position')) return;
+    }
+
+    const charRelations = ['char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'];
+    if (type === 'shape') {
+      const hasCharRelation = charRelations.some(c => currentIntervalResponses.has(c));
+      if (hasCharRelation) return;
+    }
+    if (charRelations.includes(type)) {
+      if (currentIntervalResponses.has('shape')) return;
+    }
+
     const opp = opposites[type];
     if (opp && currentIntervalResponses.has(opp)) {
       return; 
