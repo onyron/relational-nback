@@ -2068,6 +2068,13 @@
           <div class="stats-summary-sub">Combined session duration</div>
         </div>
       </div>
+      
+      <div class="stats-card-panel" id="statsModalityBreakdownPanel" style="margin-bottom: 18px; display: none;">
+        <div class="stats-panel-title">
+          <h3>Modality Sensitivity Breakdown (d' over last 15 games)</h3>
+        </div>
+        <div id="statsModalityBars" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 12px;"></div>
+      </div>
 
       <div class="stats-table-wrap">
         <table class="stats-table">
@@ -2205,6 +2212,42 @@
   let targetsCount = 0;
   let nonTargetsCount = 0;
 
+  // --- MODALITY TRACKING SYSTEM ---
+  let modalityStats = {
+    'Position':  { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
+    'Direction': { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
+    'Sound':     { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
+    'Color':     { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
+    'Character': { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
+    'Size':      { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 }
+  };
+
+  function resetModalityStats() {
+    for (const mod in modalityStats) {
+      modalityStats[mod] = { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 };
+    }
+  }
+
+  function getModalityOfFeature(feature) {
+    if (feature === 'position') return 'Position';
+    if (['north', 'south', 'east', 'west', 'above', 'below'].includes(feature)) return 'Direction';
+    if (feature === 'sound') return 'Sound';
+    if (feature === 'color') return 'Color';
+    if (['shape', 'char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'].includes(feature)) return 'Character';
+    if (feature === 'size') return 'Size';
+    return null;
+  }
+
+  function getModalitySubFeatures(modality) {
+    if (modality === 'Position') return ['position'];
+    if (modality === 'Direction') return ['north', 'south', 'east', 'west', 'above', 'below'];
+    if (modality === 'Sound') return ['sound'];
+    if (modality === 'Color') return ['color'];
+    if (modality === 'Character') return ['shape', 'char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'];
+    if (modality === 'Size') return ['size'];
+    return [];
+  }
+
   function p2z(p) {
     if (p <= 0) return -3.5;
     if (p >= 1) return 3.5;
@@ -2252,6 +2295,13 @@
       modalitySum = 1.0;
     }
     return Number((cleanD * n * modalitySum).toFixed(2));
+  }
+
+  function calculateModalityDPrime(hits, falseAlarms, targets, nonTargets) {
+    if (targets === 0 || nonTargets === 0) return null;
+    const adjustedHitRate = (hits + 0.5) / (targets + 1);
+    const adjustedFarRate = (falseAlarms + 0.5) / (nonTargets + 1);
+    return p2z(adjustedHitRate) - p2z(adjustedFarRate);
   }
 
   function getActiveFeatures() {
@@ -2789,6 +2839,18 @@ function nextStimulus() {
       const activeFeatures = getActiveFeatures();
       targetsCount += expected.size;
       nonTargetsCount += (activeFeatures.length - expected.size);
+
+      const activeModalities = getEnabledModalities();
+      activeModalities.forEach(mod => {
+        const subFeatures = getModalitySubFeatures(mod);
+        subFeatures.forEach(feat => {
+          if (expected.has(feat)) {
+            modalityStats[mod].targets++;
+          } else {
+            modalityStats[mod].nonTargets++;
+          }
+        });
+      });
     }
 
     intervalCount++;
@@ -2819,11 +2881,14 @@ function nextStimulus() {
 
     const n = +nValue.value;
     if (history.length > n) {
+      const mod = getModalityOfFeature(type);
       if (expected.has(type)) {
         hits++;
+        if (mod) modalityStats[mod].hits++;
         expected.delete(type);
       } else {
         falseAlarmsCount++;
+        if (mod) modalityStats[mod].falseAlarms++;
         falseAlarms.add(type);
       }
       updateAccuracy();
@@ -2855,6 +2920,7 @@ function nextStimulus() {
       falseAlarmsCount = 0;
       targetsCount = 0;
       nonTargetsCount = 0;
+      resetModalityStats();
       updateAccuracy();
       intervalCountEl.textContent = '0';
 
@@ -3519,7 +3585,8 @@ if (dp >= winThresh) {
       duration,
       n: Number(nValue.value),
       dimension: Number(cubeDimension.value),
-      modalities: activeModes
+      modalities: activeModes,
+      modalityStats: JSON.parse(JSON.stringify(modalityStats))
     });
 
     saveSessionHistory(historyData);
@@ -3548,6 +3615,72 @@ if (dp >= winThresh) {
     document.getElementById('statsAccuracyValue').textContent = avgCPI;
     document.getElementById('statsBestValue').textContent = bestCPI;
     document.getElementById('statsMinutesValue').textContent = `${totalMinutes}m`;
+
+    // Расчет покомпонентной аналитики за последние 15 сессий
+    const modalitiesList = ['Position', 'Direction', 'Sound', 'Color', 'Character', 'Size'];
+    const aggregated = {};
+    modalitiesList.forEach(mod => {
+      aggregated[mod] = { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 };
+    });
+
+    let gamesWithModStatsCount = 0;
+    const gamesToAnalyze = historyData.slice(0, 15);
+    gamesToAnalyze.forEach(game => {
+      if (game.modalityStats) {
+        gamesWithModStatsCount++;
+        modalitiesList.forEach(mod => {
+          if (game.modalityStats[mod]) {
+            aggregated[mod].hits += (game.modalityStats[mod].hits || 0);
+            aggregated[mod].falseAlarms += (game.modalityStats[mod].falseAlarms || 0);
+            aggregated[mod].targets += (game.modalityStats[mod].targets || 0);
+            aggregated[mod].nonTargets += (game.modalityStats[mod].nonTargets || 0);
+          }
+        });
+      }
+    });
+
+    const breakdownPanel = document.getElementById('statsModalityBreakdownPanel');
+    const barsContainer = document.getElementById('statsModalityBars');
+    
+    if (breakdownPanel && barsContainer) {
+      if (gamesWithModStatsCount > 0) {
+        const colorsMap = {
+          'Position': 'var(--position-c)',
+          'Direction': 'var(--direction-c)',
+          'Sound': 'var(--sound-c)',
+          'Color': 'var(--color-c)',
+          'Character': 'var(--char-c)',
+          'Size': 'var(--size-c)'
+        };
+
+        const barHtml = modalitiesList.map(mod => {
+          const stats = aggregated[mod];
+          const dPrime = calculateModalityDPrime(stats.hits, stats.falseAlarms, stats.targets, stats.nonTargets);
+          
+          if (dPrime === null) return '';
+          
+          const color = colorsMap[mod];
+          const percentage = Math.min(100, Math.max(0, (dPrime / 4.0) * 100));
+
+          return `
+            <div style="background: rgba(255,255,255,0.015); border: 1px solid rgba(120, 160, 230, 0.08); padding: 14px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim);">
+                <span>${mod}</span>
+                <span style="color: ${color}; font-weight: bold;">d': ${dPrime.toFixed(2)}</span>
+              </div>
+              <div style="height: 6px; background: rgba(255,255,255,0.04); border-radius: 999px; overflow: hidden; width: 100%;">
+                <div style="height: 100%; width: ${percentage}%; background: ${color}; box-shadow: 0 0 8px ${color}; border-radius: 999px;"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        barsContainer.innerHTML = barHtml;
+        breakdownPanel.style.display = 'block';
+      } else {
+        breakdownPanel.style.display = 'none';
+      }
+    }
 
     statsRecentBody.innerHTML = historyData.slice(0, 20).map(item => {
       const gameLabel = `${item.n}-Back · ${item.dimension}D`;
