@@ -1612,6 +1612,57 @@
       box-shadow: 0 0 10px var(--accent);
       border: 1px solid #fff;
     }
+    /* --- CPI TOOLTIP STYLE --- */
+    .cpi-tooltip-trigger {
+      position: relative;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1px solid var(--text-dim);
+      color: var(--text-dim);
+      font-size: 11px;
+      font-weight: bold;
+      transition: all 0.15s;
+      user-select: none;
+      margin-left: 8px;
+    }
+    .cpi-tooltip-trigger:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    .cpi-tooltip-trigger::after {
+      content: "CPI (Cognitive Performance Index) = d' × N × Sum of modality weights.Reflects actual workload: higher levels of N and the addition of new modalities increase this score, even if net accuracy d' temporarily decreases.";
+      position: absolute;
+      bottom: 130%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel-hi);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 11px;
+      line-height: 1.45;
+      white-space: pre-line;
+      width: 280px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      box-shadow: var(--shadow-lg);
+      z-index: 100;
+      text-transform: none;
+      font-weight: 500;
+      letter-spacing: normal;
+    }
+    .cpi-tooltip-trigger:hover::after {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
+    }
   </style>
 </head>
 <body>
@@ -1991,15 +2042,15 @@
         </div>
 
         <div class="stats-summary-card">
-          <div class="stats-summary-label">Average d'</div>
+          <div class="stats-summary-label">Average CPI</div>
           <div class="stats-summary-value" id="statsAccuracyValue">—</div>
           <div class="stats-summary-sub">Across all recorded sessions</div>
         </div>
 
         <div class="stats-summary-card">
-          <div class="stats-summary-label">Best d'</div>
+          <div class="stats-summary-label">Best CPI</div>
           <div class="stats-summary-value" id="statsBestValue">—</div>
-          <div class="stats-summary-sub">Highest session d'</div>
+          <div class="stats-summary-sub">Highest session CPI</div>
         </div>
 
         <div class="stats-summary-card">
@@ -2058,8 +2109,9 @@
         </div>
 
         <div class="stats-card-panel">
-          <div class="stats-panel-title">
-            <h3>Average d'</h3>
+          <div class="stats-panel-title" style="display: flex; align-items: center;">
+            <h3>Cognitive Performance (CPI)</h3>
+            <span class="cpi-tooltip-trigger">?</span>
           </div>
 
           <canvas id="progressChart" width="960" height="320"></canvas>
@@ -2170,6 +2222,27 @@
     const adjustedHitRate = (hits + 0.5) / (targetsCount + 1);
     const adjustedFarRate = (falseAlarmsCount + 0.5) / (nonTargetsCount + 1);
     return p2z(adjustedHitRate) - p2z(adjustedFarRate);
+  }
+
+  function calculateCPI(dPrime, n, activeModalities) {
+    const cleanD = Math.max(0, dPrime);
+    const weights = {
+      'Position': 1.0,
+      'Sound': 1.0,
+      'Color': 0.8,
+      'Size': 0.8,
+      'Direction': 1.5,
+      'Character': 1.5
+    };
+    let modalitySum = 0;
+    if (Array.isArray(activeModalities)) {
+      activeModalities.forEach(mode => {
+        modalitySum += (weights[mode] || 1.0);
+      });
+    } else {
+      modalitySum = 1.0;
+    }
+    return Number((cleanD * n * modalitySum).toFixed(2));
   }
 
   function getActiveFeatures() {
@@ -3454,26 +3527,32 @@ if (dp >= winThresh) {
       return;
     }
 
-    const sumDPrime = historyData.reduce((sum, item) => sum + (item.dPrime || 0), 0);
-    const avgDPrime = (sumDPrime / historyData.length).toFixed(2);
+    const cpiList = historyData.map(item => calculateCPI(item.dPrime || 0, item.n || 1, item.modalities));
+    const sumCPI = cpiList.reduce((sum, val) => sum + val, 0);
+    const avgCPI = (sumCPI / historyData.length).toFixed(2);
     
-    const bestDPrime = Math.max(...historyData.map(item => item.dPrime || 0)).toFixed(2);
+    const bestCPI = Math.max(...cpiList).toFixed(2);
     const totalMinutes = Math.round(historyData.reduce((sum, item) => sum + item.duration, 0) / 60);
 
-    document.getElementById('statsAccuracyValue').textContent = avgDPrime;
-    document.getElementById('statsBestValue').textContent = bestDPrime;
+    document.getElementById('statsAccuracyValue').textContent = avgCPI;
+    document.getElementById('statsBestValue').textContent = bestCPI;
     document.getElementById('statsMinutesValue').textContent = `${totalMinutes}m`;
 
     statsRecentBody.innerHTML = historyData.slice(0, 20).map(item => {
       const gameLabel = `${item.n}-Back · ${item.dimension}D`;
       const modalities = item.modalities.map(mode => `<span class="stats-chip">${mode}</span>`).join('');
       const dp = item.dPrime || 0;
+      const cpi = calculateCPI(dp, item.n || 1, item.modalities);
 
       return `
         <tr>
           <td class="muted">${formatSessionDate(item.timestamp)}</td>
           <td>${gameLabel}</td>
-          <td><span class="stats-pill ${getDPrimeClass(dp)}">d': ${dp.toFixed(2)}</span></td>
+          <td>
+            <span class="stats-pill ${getDPrimeClass(dp)}" style="white-space: nowrap;">
+              CPI: ${cpi.toFixed(2)} <span style="font-size: 10px; opacity: 0.8; margin-left: 4px;">(d': ${dp.toFixed(2)})</span>
+            </span>
+          </td>
           <td>${item.trials}</td>
           <td><div class="stats-modalities">${modalities}</div></td>
           <td class="muted">${formatSessionDuration(item.duration)}</td>
@@ -3646,13 +3725,14 @@ if (dp >= winThresh) {
         daily.set(key, {
           key,
           timestamp: date.getTime(),
-          dPrimeTotal: 0,
+          cpiTotal: 0,
           sessions: 0
         });
       }
 
       const day = daily.get(key);
-      day.dPrimeTotal += item.dPrime || 0;
+      const itemCPI = calculateCPI(item.dPrime || 0, item.n || 1, item.modalities);
+      day.cpiTotal += itemCPI;
       day.sessions++;
     });
 
@@ -3660,7 +3740,7 @@ if (dp >= winThresh) {
       .map(item => ({
         key: item.key,
         timestamp: item.timestamp,
-        dPrime: item.sessions ? item.dPrimeTotal / item.sessions : 0,
+        cpi: item.sessions ? item.cpiTotal / item.sessions : 0,
         sessions: item.sessions
       }))
       .sort((a, b) => a.timestamp - b.timestamp)
@@ -3672,6 +3752,15 @@ if (dp >= winThresh) {
       ctx.textAlign = 'center';
       ctx.fillText('No completed sessions yet', width / 2, height / 2);
       return;
+    }
+
+    let maxVal = 4.0;
+    chartData.forEach(item => {
+      if (item.cpi > maxVal) maxVal = item.cpi;
+    });
+    maxVal = Math.ceil(maxVal);
+    if (maxVal % 4 !== 0) {
+      maxVal += (4 - (maxVal % 4));
     }
 
     const padding = {
@@ -3707,9 +3796,9 @@ if (dp >= winThresh) {
 
     chartData.forEach((item, index) => {
       const x = getChartX(index);
-      const dp = item.dPrime || 0;
-      const clampedDp = Math.max(0, Math.min(4.0, dp));
-      const y = padding.top + usableHeight - (clampedDp / 4.0) * usableHeight;
+      const cpi = item.cpi || 0;
+      const clampedCpi = Math.max(0, Math.min(maxVal, cpi));
+      const y = padding.top + usableHeight - (clampedCpi / maxVal) * usableHeight;
 
       if (index === 0) {
         ctx.moveTo(x, y);
@@ -3727,9 +3816,9 @@ if (dp >= winThresh) {
 
     chartData.forEach((item, index) => {
       const x = getChartX(index);
-      const dp = item.dPrime || 0;
-      const clampedDp = Math.max(0, Math.min(4.0, dp));
-      const y = padding.top + usableHeight - (clampedDp / 4.0) * usableHeight;
+      const cpi = item.cpi || 0;
+      const clampedCpi = Math.max(0, Math.min(maxVal, cpi));
+      const y = padding.top + usableHeight - (clampedCpi / maxVal) * usableHeight;
 
       ctx.beginPath();
       ctx.arc(x, y, 4, 0, Math.PI * 2);
@@ -3739,17 +3828,18 @@ if (dp >= winThresh) {
       ctx.fillStyle = '#8a94b8';
       ctx.font = '11px Inter, system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(dp.toFixed(2), x, y - 12);
+      ctx.fillText(cpi.toFixed(2), x, y - 12);
     });
 
     ctx.fillStyle = '#4a5478';
     ctx.font = '11px Inter, system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'right';
 
-    ['4.0', '3.0', '2.0', '1.0', '0.0'].forEach((value, index) => {
+    for (let index = 0; index <= 4; index++) {
       const y = padding.top + ((height - padding.top - padding.bottom) / 4) * index + 4;
-      ctx.fillText(value, padding.left - 8, y);
-    });
+      const valLabel = (maxVal - (maxVal / 4) * index).toFixed(1);
+      ctx.fillText(valLabel, padding.left - 8, y);
+    }
 
     ctx.fillStyle = '#8a94b8';
     ctx.font = '10px Inter, system-ui, -apple-system, sans-serif';
@@ -3757,7 +3847,6 @@ if (dp >= winThresh) {
 
     chartData.forEach((item, index) => {
       const x = getChartX(index);
-      
       const date = new Date(item.timestamp);
       const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       
