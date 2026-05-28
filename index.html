@@ -2035,10 +2035,19 @@
   <div class="stats-modal-content">
     <div class="stats-view active" id="statsRecentView">
       <div class="stats-summary-grid">
-        <div class="stats-summary-card">
-          <div class="stats-summary-label">Sessions</div>
-          <div class="stats-summary-value" id="statsSessionsValue">0</div>
-          <div class="stats-summary-sub">Saved locally in your browser</div>
+        <div class="stats-summary-card" style="justify-content: space-between;">
+          <div>
+            <div class="stats-summary-label">Sessions</div>
+            <div class="stats-summary-value" id="statsSessionsValue">0</div>
+          </div>
+          <div class="stats-summary-sub" style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+            <span>Saved locally in your browser</span>
+            <div style="display: flex; gap: 6px;">
+              <button id="exportStatsBtn" class="btn" style="padding: 5px 10px; height: auto; font-size: 11px; background: rgba(110, 231, 255, 0.1); border-color: rgba(110, 231, 255, 0.25); color: var(--accent);" title="Export backup to JSON">Export</button>
+              <button id="importStatsBtn" class="btn" style="padding: 5px 10px; height: auto; font-size: 11px; background: rgba(255,255,255,0.04); border-color: var(--border);" title="Import backup from JSON">Import</button>
+              <input type="file" id="importStatsFile" accept=".json" style="display: none;" />
+            </div>
+          </div>
         </div>
 
         <div class="stats-summary-card">
@@ -3891,6 +3900,87 @@ if (dp >= winThresh) {
   statsBtn.addEventListener('click', openStatsModal);
   statsBackdrop.addEventListener('click', closeStatsModalFn);
   closeStatsBtn.addEventListener('click', closeStatsModalFn);
+
+  // --- EXPORT & IMPORT SYSTEM ---
+  const exportStatsBtn = document.getElementById('exportStatsBtn');
+  const importStatsBtn = document.getElementById('importStatsBtn');
+  const importStatsFile = document.getElementById('importStatsFile');
+
+  if (exportStatsBtn) {
+    exportStatsBtn.addEventListener('click', () => {
+      const historyData = loadSessionHistory();
+      if (!historyData.length) {
+        alert('Training history is empty. Nothing to export.');
+        return;
+      }
+      
+      const fileData = JSON.stringify(historyData, null, 2);
+      const blob = new Blob([fileData], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.href = url;
+      downloadAnchor.download = `relational_nback_history_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      
+      document.body.removeChild(downloadAnchor);
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  if (importStatsBtn && importStatsFile) {
+    importStatsBtn.addEventListener('click', () => {
+      importStatsFile.click();
+    });
+
+    importStatsFile.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          if (!Array.isArray(parsed)) {
+            throw new Error("Invalid backup format. File must contain an array of sessions.");
+          }
+
+          const isValid = parsed.every(item => item && typeof item === 'object' && 'timestamp' in item);
+          if (!isValid) {
+            throw new Error("File is corrupted or contains invalid session data.");
+          }
+
+          const existing = loadSessionHistory();
+          const existingTimestamps = new Set(existing.map(item => item.timestamp));
+
+          let mergedCount = 0;
+          parsed.forEach(item => {
+            if (!existingTimestamps.has(item.timestamp)) {
+              existing.push(item);
+              mergedCount++;
+            }
+          });
+
+          if (mergedCount === 0) {
+            alert("Import complete. All sessions in this file already exist in your local history.");
+            return;
+          }
+
+          existing.sort((a, b) => b.timestamp - a.timestamp);
+
+          saveSessionHistory(existing);
+          alert(`Import successfully completed! Added ${mergedCount} new sessions.`);
+          
+          renderStatsModal();
+        } catch (err) {
+          alert(`Import error: ${err.message}`);
+        }
+        importStatsFile.value = '';
+      };
+      reader.readAsText(file);
+    });
+  }
 
   statsTabs.forEach(tab => {
     tab.addEventListener('click', () => {
