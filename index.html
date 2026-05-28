@@ -2954,12 +2954,6 @@ function nextStimulus() {
     document.body.classList.remove('game-active');
     startBtn.innerHTML = '▶ Play';
 
-    if (!naturalEnd) {
-      winStreakCount = 0;
-      loseStreakCount = 0;
-      saveSettings();
-    }
-
     if (startGameTimeout) {
       clearTimeout(startGameTimeout);
       startGameTimeout = null;
