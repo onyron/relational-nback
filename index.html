@@ -360,36 +360,6 @@
       justify-content: center;
       flex-wrap: wrap;
     }
-    .interval-pill {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      border-radius: 999px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      font-weight: 600;
-    }
-    .interval-pill .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--success);
-      box-shadow: 0 0 8px var(--success);
-      animation: pulse 1.5s ease-in-out infinite;
-    }
-    .interval-pill.idle .dot {
-      background: var(--text-faint);
-      box-shadow: none;
-      animation: none;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
-    }
 
     .primary-actions {
       display: flex;
@@ -1015,7 +985,6 @@
 
     @media (max-width: 900px) {
       .dock { grid-template-columns: repeat(2, 1fr); }
-      .brand-text p { display: none; }
 
       .stat-card {
         display: flex !important;
@@ -1044,13 +1013,10 @@
       .topbar { padding: 12px 14px; }
       .response-btn .lbl { font-size: 10px; }
       .primary-actions { flex-wrap: wrap; justify-content: center; }
-      .char-intro-inner { padding: 20px; }
-      #characterGrid > div { padding: 20px 28px; font-size: 22px; }
     }
     @media (max-width: 380px) {
       :root { --cube-size: min(var(--user-cube-size), 170px); }
       .stage-frame { padding: 66px 50px; }
-      .brand-text h1 { font-size: 13px; }
     }
     
     body.game-active .stat-card,
@@ -1737,7 +1703,7 @@
     <div class="stage">
       <div class="stage-frame">
         <div class="scene">
-          <div class="cube-wrapper" id="cubeWrapper" style="--spin-speed:18s">
+          <div class="cube-wrapper" id="cubeWrapper">
             <div class="axes">
               <div class="axis-line axis-x"></div>
               <div class="axis-line axis-y"></div>
@@ -2394,7 +2360,6 @@
     αβγ:   ['α','β','γ','δ','ε'],
     IV:   ['I','II','III','IV','V']
   };
-  const characterSetKeys = Object.keys(charSets);
   let charGridLayout = null;
 
   const charReference = document.getElementById('charReference');
@@ -3619,7 +3584,6 @@ if (dp >= winThresh) {
     document.getElementById('statsBestValue').textContent = bestCPI;
     document.getElementById('statsMinutesValue').textContent = `${totalMinutes}m`;
 
-    // Расчет покомпонентной аналитики за последние 15 сессий
     const modalitiesList = ['Position', 'Direction', 'Sound', 'Color', 'Character', 'Size'];
     const aggregated = {};
     modalitiesList.forEach(mod => {
