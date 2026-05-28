@@ -2726,14 +2726,21 @@ function computeSmartRotation(now) {
   }
 
 function nextStimulus() {
+    const maxTrials = +numTrials.value;
+
+    if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
+      const currentN = Number(nValue.value);
+      checkAutoProgression();
+      stopGame(true, currentN);
+      return;
+    }
+
     currentIntervalResponses.clear();
 
     const n = +nValue.value;
 
     const missed = [...expected];
     const wrong = [...falseAlarms];
-
-    const maxTrials = +numTrials.value;
 
     const showFb = (feedbackMode.value === 'show' || feedbackMode.value === 'hideCounter');
     if (showFb && (missed.length || wrong.length)) {
@@ -2851,12 +2858,6 @@ function nextStimulus() {
 
     intervalCount++;
     intervalCountEl.textContent = intervalCount;
-    if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
-      const currentN = Number(nValue.value);
-      checkAutoProgression();
-      stopGame(true, currentN);
-      return;
-    }
   }
 
   function updateAccuracy() {
@@ -2954,6 +2955,12 @@ function nextStimulus() {
   function stopGame(naturalEnd = false, playedN = null) {
     document.body.classList.remove('game-active');
     startBtn.innerHTML = '▶ Play';
+
+    if (naturalEnd === false && gameActive) {
+      winStreakCount = 0;
+      loseStreakCount = 0;
+      saveSettings();
+    }
 
     if (startGameTimeout) {
       clearTimeout(startGameTimeout);
