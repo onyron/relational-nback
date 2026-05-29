@@ -2502,12 +2502,67 @@ let t = now + rotationState.timeOffset;
     normalizeMatrix(currentRotationMatrix);
   }
 
+  function setRandomRotation() {
+    const u1 = Math.random();
+    const u2 = Math.random();
+    const u3 = Math.random();
+
+    const w = Math.sqrt(1 - u1) * Math.sin(2 * Math.PI * u2);
+    const x = Math.sqrt(1 - u1) * Math.cos(2 * Math.PI * u2);
+    const y = Math.sqrt(u1) * Math.sin(2 * Math.PI * u3);
+    const z = Math.sqrt(u1) * Math.cos(2 * Math.PI * u3);
+
+    const m11 = 1 - 2 * y * y - 2 * z * z;
+    const m12 = 2 * x * y - 2 * w * z;
+    const m13 = 2 * x * z + 2 * w * y;
+
+    const m21 = 2 * x * y + 2 * w * z;
+    const m22 = 1 - 2 * x * x - 2 * z * z;
+    const m23 = 2 * y * z - 2 * w * x;
+
+    const m31 = 2 * x * z - 2 * w * y;
+    const m32 = 2 * y * z + 2 * w * x;
+    const m33 = 1 - 2 * x * x - 2 * y * y;
+
+    currentRotationMatrix = new DOMMatrix([
+      m11, m12, m13, 0,
+      m21, m22, m23, 0,
+      m31, m32, m33, 0,
+      0,   0,   0,   1
+    ]);
+  }
+
+  function sortCells() {
+    const n = +cubeDimension.value || 3;
+    const offset = (n - 1) / 2;
+
+    cells.forEach(cell => {
+      const x = +cell.dataset.x;
+      const y = +cell.dataset.y;
+      const z = +cell.dataset.z;
+
+      const dx = x - offset;
+      const dy = y - offset;
+      const dz = z - offset;
+
+      const rotatedZ = dx * currentRotationMatrix.m13 + dy * currentRotationMatrix.m23 + dz * currentRotationMatrix.m33;
+      cell.dataset.rotatedZ = rotatedZ;
+    });
+
+    cells.sort((a, b) => parseFloat(a.dataset.rotatedZ) - parseFloat(b.dataset.rotatedZ));
+
+    cells.forEach(cell => {
+      gridCube.appendChild(cell);
+    });
+  }
+
   function animateSmartRotation(now) {
     computeSmartRotation(now);
     const zDrift = Math.sin(now * 0.0007) * 35;
     const yDrift = Math.cos(now * 0.0005) * 15;
     const xDrift = Math.sin(now * 0.0004) * 15;
     cubeWrapper.style.transform = `translate3d(${xDrift}px, ${yDrift}px, ${zDrift}px) ` + currentRotationMatrix.toString();
+    sortCells();
     rotationRuntime.rafId = requestAnimationFrame(animateSmartRotation);
   }
 
@@ -3248,6 +3303,7 @@ if (dp >= winThresh) {
   loadSettings();
   updateRotationTempoCache();
   loadMinutesToday();
+  setRandomRotation();
   startSmartRotation();
   document.documentElement.style.setProperty('--user-cube-size', `${cubeSize.value}px`);
   buildCube(+cubeDimension.value || 3);
