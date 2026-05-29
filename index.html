@@ -2237,10 +2237,24 @@
   }
 
   function calculateDPrime() {
-    if (targetsCount === 0 || nonTargetsCount === 0) return 0;
-    const adjustedHitRate = (hits + 0.5) / (targetsCount + 1);
-    const adjustedFarRate = (falseAlarmsCount + 0.5) / (nonTargetsCount + 1);
-    return p2z(adjustedHitRate) - p2z(adjustedFarRate);
+    const activeModalities = getEnabledModalities();
+    if (activeModalities.length === 0) return 0;
+    
+    let sumD = 0;
+    let count = 0;
+    
+    activeModalities.forEach(mod => {
+      const stats = modalityStats[mod];
+      if (stats && (stats.targets > 0 || stats.nonTargets > 0)) {
+        const dp = calculateModalityDPrime(stats.hits, stats.falseAlarms, stats.targets, stats.nonTargets);
+        if (dp !== null) {
+          sumD += dp;
+          count++;
+        }
+      }
+    });
+    
+    return count > 0 ? sumD / count : 0;
   }
 
   function calculateCPI(dPrime, n, activeModalities) {
