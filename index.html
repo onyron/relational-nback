@@ -2509,8 +2509,11 @@ function computeSmartRotation(now) {
     const DEG_TO_RAD = Math.PI / 180;
     const RAD_TO_DEG = 180 / Math.PI;
 
+    let firstFrame = false;
     if (rotationState.currentAxis === undefined) {
-      rotationState.currentAxis = new Float64Array([1, 0, 0]);
+      rotationState.currentAxis = new Float64Array(3);
+      rotationState.timeOffset = Math.random() * 10000000;
+      firstFrame = true;
     }
 
     if (!rotationState.lastTime) {
@@ -2522,21 +2525,29 @@ function computeSmartRotation(now) {
       dt = 0.1;
     }
 
-    let theta = now * 0.00018 
-              + Math.sin(now * 0.00085) * 0.9 
-              + Math.cos(now * 0.00165) * 0.35;
+    let t = now + rotationState.timeOffset;
+
+    let theta = t * 0.00018 
+              + Math.sin(t * 0.00085) * 0.9 
+              + Math.cos(t * 0.00165) * 0.35;
               
-    let phi = Math.sin(now * 0.00062) * 0.95 
-            + Math.cos(now * 0.00135) * 0.45 
-            + Math.sin(now * 0.00225) * 0.15;
+    let phi = Math.sin(t * 0.00062) * 0.95 
+            + Math.cos(t * 0.00135) * 0.45 
+            + Math.sin(t * 0.00225) * 0.15;
 
     let tx = Math.cos(phi) * Math.cos(theta);
     let ty = Math.cos(phi) * Math.sin(theta);
     let tz = Math.sin(phi);
 
-    rotationState.currentAxis[0] += (tx - rotationState.currentAxis[0]) * dt * 1.0;
-    rotationState.currentAxis[1] += (ty - rotationState.currentAxis[1]) * dt * 1.0;
-    rotationState.currentAxis[2] += (tz - rotationState.currentAxis[2]) * dt * 1.0;
+    if (firstFrame) {
+      rotationState.currentAxis[0] = tx;
+      rotationState.currentAxis[1] = ty;
+      rotationState.currentAxis[2] = tz;
+    } else {
+      rotationState.currentAxis[0] += (tx - rotationState.currentAxis[0]) * dt * 1.0;
+      rotationState.currentAxis[1] += (ty - rotationState.currentAxis[1]) * dt * 1.0;
+      rotationState.currentAxis[2] += (tz - rotationState.currentAxis[2]) * dt * 1.0;
+    }
 
     let len = Math.sqrt(
       rotationState.currentAxis[0] * rotationState.currentAxis[0] +
