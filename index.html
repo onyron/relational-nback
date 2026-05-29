@@ -2532,37 +2532,12 @@ let t = now + rotationState.timeOffset;
     ]);
   }
 
-  function sortCells() {
-    const n = +cubeDimension.value || 3;
-    const offset = (n - 1) / 2;
-
-    cells.forEach(cell => {
-      const x = +cell.dataset.x;
-      const y = +cell.dataset.y;
-      const z = +cell.dataset.z;
-
-      const dx = x - offset;
-      const dy = y - offset;
-      const dz = z - offset;
-
-      const rotatedZ = dx * currentRotationMatrix.m13 + dy * currentRotationMatrix.m23 + dz * currentRotationMatrix.m33;
-      cell.dataset.rotatedZ = rotatedZ;
-    });
-
-    cells.sort((a, b) => parseFloat(a.dataset.rotatedZ) - parseFloat(b.dataset.rotatedZ));
-
-    cells.forEach(cell => {
-      gridCube.appendChild(cell);
-    });
-  }
-
   function animateSmartRotation(now) {
     computeSmartRotation(now);
     const zDrift = Math.sin(now * 0.0007) * 35;
     const yDrift = Math.cos(now * 0.0005) * 15;
     const xDrift = Math.sin(now * 0.0004) * 15;
     cubeWrapper.style.transform = `translate3d(${xDrift}px, ${yDrift}px, ${zDrift}px) ` + currentRotationMatrix.toString();
-    sortCells();
     rotationRuntime.rafId = requestAnimationFrame(animateSmartRotation);
   }
 
