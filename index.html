@@ -209,7 +209,7 @@
     }
 
     .scene {
-      perspective: 1200px;
+      perspective: 850px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1870,7 +1870,7 @@
     </div>
     <div class="setting-group">
       <label>Rotation (seconds)</label>
-      <input type="number" id="rotationSpeed" value="16" min="1" />
+      <input type="number" id="rotationSpeed" value="13" min="1" />
     </div>
   </div>
 
@@ -2399,15 +2399,37 @@
   }
 
   const rotationState = {
-    angles: new Float64Array(3),
     velocities: new Float64Array(3),
     lastTime: 0
   };
+
+  let currentRotationMatrix = new DOMMatrix();
 
   const rotationRuntime = {
     rafId: null,
     active: null
   };
+
+  function normalizeMatrix(m) {
+    let len1 = Math.sqrt(m.m11 * m.m11 + m.m12 * m.m12 + m.m13 * m.m13);
+    if (len1 > 0) {
+      m.m11 /= len1; m.m12 /= len1; m.m13 /= len1;
+    }
+    
+    let dot = m.m11 * m.m21 + m.m12 * m.m22 + m.m13 * m.m23;
+    m.m21 -= dot * m.m11;
+    m.m22 -= dot * m.m12;
+    m.m23 -= dot * m.m13;
+    
+    let len2 = Math.sqrt(m.m21 * m.m21 + m.m22 * m.m22 + m.m23 * m.m23);
+    if (len2 > 0) {
+      m.m21 /= len2; m.m22 /= len2; m.m23 /= len2;
+    }
+    
+    m.m31 = m.m12 * m.m23 - m.m13 * m.m22;
+    m.m32 = m.m13 * m.m21 - m.m11 * m.m23;
+    m.m33 = m.m11 * m.m22 - m.m12 * m.m21;
+  }
 
   function mulberry32(seed) {
     let t = seed >>> 0;
@@ -2421,30 +2443,23 @@
   }
 
   function createTrajectory(baseSpeed, rnd, startTime) {
-    const scales = [1.0, 0.7, 0.4];
-    for (let i = scales.length - 1; i > 0; i--) {
-      const j = Math.floor(rnd() * (i + 1));
-      const temp = scales[i];
-      scales[i] = scales[j];
-      scales[j] = temp;
-    }
     return {
       startedAt: startTime,
-      speedX: baseSpeed * scales[0] * (rnd() > 0.5 ? 1 : -1),
-      speedY: baseSpeed * scales[1] * (rnd() > 0.5 ? 1 : -1),
-      speedZ: baseSpeed * scales[2] * (rnd() > 0.5 ? 1 : -1),
-      ampX1: 3.0 + rnd() * 4.0,
-      ampX2: 1.0 + rnd() * 2.0,
-      ampY1: 3.5 + rnd() * 4.5,
-      ampY2: 1.5 + rnd() * 2.5,
-      ampZ1: 2.0 + rnd() * 3.0,
-      ampZ2: 0.5 + rnd() * 1.5,
-      freqX1: (0.083 * Math.SQRT2) * (0.85 + rnd() * 0.3),
-      freqX2: (0.017 * Math.PI) * (0.85 + rnd() * 0.3),
-      freqY1: (0.061 * Math.sqrt(3)) * (0.85 + rnd() * 0.3),
-      freqY2: (0.011 * Math.E) * (0.85 + rnd() * 0.3),
-      freqZ1: (0.073 * Math.sqrt(7)) * (0.85 + rnd() * 0.3),
-      freqZ2: (0.029 * GOLDEN_RATIO) * (0.85 + rnd() * 0.3),
+      speedX: baseSpeed * 0.22 * (rnd() > 0.5 ? 1 : -1),
+      speedY: baseSpeed * 0.18 * (rnd() > 0.5 ? 1 : -1),
+      speedZ: baseSpeed * 0.15 * (rnd() > 0.5 ? 1 : -1),
+      ampX1: baseSpeed * (0.65 + rnd() * 0.35),
+      ampX2: baseSpeed * (0.35 + rnd() * 0.25),
+      ampY1: baseSpeed * (0.65 + rnd() * 0.35),
+      ampY2: baseSpeed * (0.35 + rnd() * 0.25),
+      ampZ1: baseSpeed * (0.65 + rnd() * 0.35),
+      ampZ2: baseSpeed * (0.35 + rnd() * 0.25),
+      freqX1: 0.75 * (0.85 + rnd() * 0.3),
+      freqX2: 0.20 * (0.85 + rnd() * 0.3),
+      freqY1: 0.60 * (0.85 + rnd() * 0.3),
+      freqY2: 0.15 * (0.85 + rnd() * 0.3),
+      freqZ1: 0.68 * (0.85 + rnd() * 0.3),
+      freqZ2: 0.25 * (0.85 + rnd() * 0.3),
       phaseX1: rnd() * TAU,
       phaseX2: rnd() * TAU,
       phaseY1: rnd() * TAU,
@@ -2456,9 +2471,9 @@
 
   function evaluateTrajectoryVelocity(traj, now) {
     const t = (now - traj.startedAt) * 0.001;
-    const vx = traj.speedX + traj.ampX1 * traj.freqX1 * Math.cos(traj.freqX1 * t + traj.phaseX1) + traj.ampX2 * traj.freqX2 * Math.cos(traj.freqX2 * t + traj.phaseX2);
-    const vy = traj.speedY + traj.ampY1 * traj.freqY1 * Math.cos(traj.freqY1 * t + traj.phaseY1) + traj.ampY2 * traj.freqY2 * Math.cos(traj.freqY2 * t + traj.phaseY2);
-    const vz = traj.speedZ + traj.ampZ1 * traj.freqZ1 * Math.cos(traj.freqZ1 * t + traj.phaseZ1) + traj.ampZ2 * traj.freqZ2 * Math.cos(traj.freqZ2 * t + traj.phaseZ2);
+    const vx = traj.speedX + traj.ampX1 * Math.cos(traj.freqX1 * t + traj.phaseX1) + traj.ampX2 * Math.cos(traj.freqX2 * t + traj.phaseX2);
+    const vy = traj.speedY + traj.ampY1 * Math.cos(traj.freqY1 * t + traj.phaseY1) + traj.ampY2 * Math.cos(traj.freqY2 * t + traj.phaseY2);
+    const vz = traj.speedZ + traj.ampZ1 * Math.cos(traj.freqZ1 * t + traj.phaseZ1) + traj.ampZ2 * Math.cos(traj.freqZ2 * t + traj.phaseZ2);
     return [vx, vy, vz];
   }
 
@@ -2490,7 +2505,14 @@
     return wrapDegrees(a + diff * t);
   }
 
-  function computeSmartRotation(now) {
+function computeSmartRotation(now) {
+    const DEG_TO_RAD = Math.PI / 180;
+    const RAD_TO_DEG = 180 / Math.PI;
+
+    if (rotationState.currentAxis === undefined) {
+      rotationState.currentAxis = new Float64Array([1, 0, 0]);
+    }
+
     if (!rotationState.lastTime) {
       rotationState.lastTime = now;
     }
@@ -2499,22 +2521,58 @@
     if (dt > 0.1) {
       dt = 0.1;
     }
-    if (rotationRuntime.active) {
-      const targetVel = evaluateTrajectoryVelocity(rotationRuntime.active, now);
-      const tau = 0.6;
-      const alpha = 1 - Math.exp(-dt / tau);
-      rotationState.velocities[0] = rotationState.velocities[0] * (1 - alpha) + targetVel[0] * alpha;
-      rotationState.velocities[1] = rotationState.velocities[1] * (1 - alpha) + targetVel[1] * alpha;
-      rotationState.velocities[2] = rotationState.velocities[2] * (1 - alpha) + targetVel[2] * alpha;
+
+    let theta = now * 0.00018 
+              + Math.sin(now * 0.00085) * 0.9 
+              + Math.cos(now * 0.00165) * 0.35;
+              
+    let phi = Math.sin(now * 0.00062) * 0.95 
+            + Math.cos(now * 0.00135) * 0.45 
+            + Math.sin(now * 0.00225) * 0.15;
+
+    let tx = Math.cos(phi) * Math.cos(theta);
+    let ty = Math.cos(phi) * Math.sin(theta);
+    let tz = Math.sin(phi);
+
+    rotationState.currentAxis[0] += (tx - rotationState.currentAxis[0]) * dt * 1.0;
+    rotationState.currentAxis[1] += (ty - rotationState.currentAxis[1]) * dt * 1.0;
+    rotationState.currentAxis[2] += (tz - rotationState.currentAxis[2]) * dt * 1.0;
+
+    let len = Math.sqrt(
+      rotationState.currentAxis[0] * rotationState.currentAxis[0] +
+      rotationState.currentAxis[1] * rotationState.currentAxis[1] +
+      rotationState.currentAxis[2] * rotationState.currentAxis[2]
+    );
+    if (len > 0) {
+      rotationState.currentAxis[0] /= len;
+      rotationState.currentAxis[1] /= len;
+      rotationState.currentAxis[2] /= len;
     }
-    rotationState.angles[0] = wrapDegrees(rotationState.angles[0] + rotationState.velocities[0] * dt);
-    rotationState.angles[1] = wrapDegrees(rotationState.angles[1] + rotationState.velocities[1] * dt);
-    rotationState.angles[2] = wrapDegrees(rotationState.angles[2] + rotationState.velocities[2] * dt);
+
+    let maxTargetSpeedRad = baseRotationSpeedDegSec * DEG_TO_RAD;
+
+    rotationState.velocities[0] = rotationState.currentAxis[0] * maxTargetSpeedRad * RAD_TO_DEG;
+    rotationState.velocities[1] = rotationState.currentAxis[1] * maxTargetSpeedRad * RAD_TO_DEG;
+    rotationState.velocities[2] = rotationState.currentAxis[2] * maxTargetSpeedRad * RAD_TO_DEG;
+
+    let dx = rotationState.velocities[0] * dt;
+    let dy = rotationState.velocities[1] * dt;
+    let dz = rotationState.velocities[2] * dt;
+
+    let incrementalRotation = new DOMMatrix();
+    incrementalRotation.rotateSelf(dx, dy, dz);
+
+    currentRotationMatrix.preMultiplySelf(incrementalRotation);
+
+    normalizeMatrix(currentRotationMatrix);
   }
 
   function animateSmartRotation(now) {
     computeSmartRotation(now);
-    cubeWrapper.style.transform = `rotateX(${rotationState.angles[0]}deg) rotateY(${rotationState.angles[1]}deg) rotateZ(${rotationState.angles[2]}deg) translate3d(0, 0, 0)`;
+    const zDrift = Math.sin(now * 0.0007) * 35;
+    const yDrift = Math.cos(now * 0.0005) * 15;
+    const xDrift = Math.sin(now * 0.0004) * 15;
+    cubeWrapper.style.transform = `translate3d(${xDrift}px, ${yDrift}px, ${zDrift}px) ` + currentRotationMatrix.toString();
     rotationRuntime.rafId = requestAnimationFrame(animateSmartRotation);
   }
 
@@ -2711,6 +2769,9 @@
     feedbackToast.classList.remove('visible');
   }
 
+function applySoftTorqueImpulse() {
+}
+
 function nextStimulus() {
     const maxTrials = +numTrials.value;
 
@@ -2720,6 +2781,8 @@ function nextStimulus() {
       stopGame(true, currentN);
       return;
     }
+
+    applySoftTorqueImpulse();
 
     currentIntervalResponses.clear();
 
@@ -2915,6 +2978,7 @@ function nextStimulus() {
       closeSettingsFn();
       stopGame();
       reseedRotationPath('play');
+      
       document.body.classList.add('game-active');
       startBtn.innerHTML = '■ Stop';
       history = [];
