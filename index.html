@@ -2525,15 +2525,15 @@ function computeSmartRotation(now) {
       dt = 0.1;
     }
 
-    let t = now + rotationState.timeOffset;
+let t = now + rotationState.timeOffset;
 
-    let theta = t * 0.00018 
-              + Math.sin(t * 0.00085) * 0.9 
-              + Math.cos(t * 0.00165) * 0.35;
-              
-    let phi = Math.sin(t * 0.00062) * 0.95 
-            + Math.cos(t * 0.00135) * 0.45 
-            + Math.sin(t * 0.00225) * 0.15;
+      let theta = t * 0.00015 
+                + Math.sin(t * 0.0006 * Math.SQRT2) * 0.9 
+                + Math.cos(t * 0.001 * Math.sqrt(3)) * 0.35;
+                
+      let phi = Math.sin(t * 0.0004 * Math.sqrt(5)) * 0.95 
+              + Math.cos(t * 0.0008 * 1.6180339887) * 0.45 
+              + Math.sin(t * 0.001 * Math.LN10) * 0.15;
 
     let tx = Math.cos(phi) * Math.cos(theta);
     let ty = Math.cos(phi) * Math.sin(theta);
