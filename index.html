@@ -602,7 +602,7 @@
     .compass .c-e { grid-column: 3; grid-row: 2; }
     .compass .c-up { grid-column: 1; grid-row: 1; }
     .compass .c-dn { grid-column: 3; grid-row: 3; }
-    .compass .c-mid {
+    .compass div.c-mid {
       grid-column: 2; grid-row: 2;
       display: grid;
       place-items: center;
@@ -611,6 +611,10 @@
       text-transform: uppercase;
       letter-spacing: 1.5px;
       font-weight: 700;
+    }
+
+    .compass button.c-mid {
+      grid-column: 2; grid-row: 2;
     }
 
     /* ---------- SETTINGS DRAWER ---------- */
@@ -1746,23 +1750,10 @@
     <div class="dock-title">Response Console</div>
     <div class="dock">
 
-      <div class="panel pos">
-        <div class="panel-header">
-          <div class="panel-title"><span class="bullet"></span>Position</div>
-          <span class="panel-hotkey">A</span>
-        </div>
-        <div class="grid-1">
-          <button class="response-btn big" id="positionBtn">
-            <span class="ico">⌖</span>
-            <span>Position Match</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="panel dir">
+      <div class="panel dir" style="max-width: 360px;">
         <div class="panel-header">
           <div class="panel-title"><span class="bullet"></span>Direction</div>
-          <span class="panel-hotkey">← ↑ ↓ → PgUp PgDn</span>
+          <span class="panel-hotkey">← ↑ ↓ → PgUp PgDn 5</span>
         </div>
         <div class="compass">
           <button class="response-btn c-n" data-dir="north">
@@ -1771,7 +1762,10 @@
           <button class="response-btn c-w" data-dir="west">
             <span class="ico">←</span><span class="lbl">West</span>
           </button>
-          <div class="c-mid">Move</div>
+          <button class="response-btn c-mid" id="positionBtn">
+            <span class="ico">⌖</span>
+            <span class="lbl">Match</span>
+          </button>
           <button class="response-btn c-e" data-dir="east">
             <span class="ico">→</span><span class="lbl">East</span>
           </button>
@@ -1957,10 +1951,6 @@
     <div class="settings-section-title">Modalities</div>
 
     <label class="toggle-row">
-      <span class="tr-label"><span class="tr-icon">⌖</span>Position</span>
-      <input type="checkbox" id="positionOn" checked>
-    </label>
-    <label class="toggle-row">
       <span class="tr-label"><span class="tr-icon">→</span>Direction</span>
       <input type="checkbox" id="directionalOn" checked>
     </label>
@@ -2144,7 +2134,6 @@
   const hideResponseConsole = document.getElementById('hideResponseConsole');
   const responseConsole = document.querySelector('.dock-wrap');
 
-  const positionOn = document.getElementById('positionOn');
   const directionalOn = document.getElementById('directionalOn');
   const soundOn = document.getElementById('soundOn');
   const colorOn = document.getElementById('colorOn');
@@ -2198,7 +2187,6 @@
 
   // --- MODALITY TRACKING SYSTEM ---
   let modalityStats = {
-    'Position':  { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
     'Direction': { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
     'Sound':     { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
     'Color':     { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
@@ -2213,7 +2201,7 @@
   }
 
   function getModalityOfFeature(feature) {
-    if (feature === 'position') return 'Position';
+    if (feature === 'position') return 'Direction';
     if (['north', 'south', 'east', 'west', 'above', 'below'].includes(feature)) return 'Direction';
     if (feature === 'sound') return 'Sound';
     if (feature === 'color') return 'Color';
@@ -2223,8 +2211,7 @@
   }
 
   function getModalitySubFeatures(modality) {
-    if (modality === 'Position') return ['position'];
-    if (modality === 'Direction') return ['north', 'south', 'east', 'west', 'above', 'below'];
+    if (modality === 'Direction') return ['north', 'south', 'east', 'west', 'above', 'below', 'position'];
     if (modality === 'Sound') return ['sound'];
     if (modality === 'Color') return ['color'];
     if (modality === 'Character') return ['shape', 'char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'];
@@ -2277,7 +2264,6 @@
   function calculateCPI(dPrime, n, activeModalities) {
     const cleanD = Math.max(0, dPrime);
     const weights = {
-      'Position': 1.0,
       'Sound': 1.0,
       'Color': 0.8,
       'Size': 0.8,
@@ -2304,12 +2290,11 @@
 
   function getActiveFeatures() {
     const list = [];
-    if (positionOn.checked) list.push('position');
     if (soundOn.checked) list.push('sound');
     if (colorOn.checked) list.push('color');
     if (sizeOn.checked) list.push('size');
     if (directionalOn.checked) {
-      list.push('north', 'south', 'east', 'west', 'above', 'below');
+      list.push('north', 'south', 'east', 'west', 'above', 'below', 'position');
     }
     if (shapeOn.checked) {
       list.push('shape', 'char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower');
@@ -2834,7 +2819,7 @@ function nextStimulus() {
       const a = history[history.length - 1 - n];
       const b = history[history.length - 1];
 
-      if (positionOn.checked && a.cellIndex === b.cellIndex) expected.add('position');
+      if (directionalOn.checked && a.cellIndex === b.cellIndex) expected.add('position');
 
       if (directionalOn.checked) {
         const dx = b.cell.dataset.x - a.cell.dataset.x;
@@ -2896,7 +2881,7 @@ function nextStimulus() {
   }
 
   function respond(type) {
-    if (type === 'position' && !positionOn.checked) return;
+    if (type === 'position' && !directionalOn.checked) return;
     if (['north', 'south', 'east', 'west', 'above', 'below'].includes(type) && !directionalOn.checked) return;
     if (type === 'sound' && !soundOn.checked) return;
     if (type === 'color' && !colorOn.checked) return;
@@ -3101,7 +3086,6 @@ function nextStimulus() {
     { el: numTrials,           key: 'numTrials',           prop: 'value' },
     { el: feedbackMode,        key: 'feedbackMode',        prop: 'value' },
     { el: hideResponseConsole, key: 'hideResponseConsole', prop: 'checked' },
-    { el: positionOn,          key: 'positionOn',          prop: 'checked' },
     { el: directionalOn,       key: 'directionalOn',       prop: 'checked' },
     { el: soundOn,             key: 'soundOn',             prop: 'checked' },
     { el: colorOn,             key: 'colorOn',             prop: 'checked' },
@@ -3310,7 +3294,7 @@ if (dp >= winThresh) {
   const KEYBINDS_KEY = 'nback-keybinds-v1';
 
   const defaultBindings = {
-    'position': 'a', 'sound': 's', 'color': 'd', 'shape': 'f', 'size': 'g',
+    'position': '5', 'sound': 's', 'color': 'd', 'shape': 'f', 'size': 'g',
     'north': 'ArrowUp', 'south': 'ArrowDown', 'west': 'ArrowLeft',
     'east': 'ArrowRight', 'above': 'PageUp', 'below': 'PageDown',
     'char-north': 'i', 'char-south': 'k', 'char-west': 'j',
@@ -3387,17 +3371,20 @@ if (dp >= winThresh) {
 
   function updateHotkeyLabels() {
     const q = s => document.querySelector(s);
-    q('.panel.pos .panel-hotkey').textContent = keyDisplayName(bindings.position);
-    q('.panel.dir .panel-hotkey').textContent =
-      [bindings.west, bindings.north, bindings.south, bindings.east, bindings.above, bindings.below]
-        .map(keyDisplayName).join(' ');
-    q('.panel.snd .panel-hotkey').textContent = keyDisplayName(bindings.sound);
-    q('.panel.col .panel-hotkey').textContent = keyDisplayName(bindings.color);
-    q('.panel.chr .panel-hotkey').textContent =
-      keyDisplayName(bindings.shape) + ' · ' +
-      ['char-north', 'char-west', 'char-east', 'char-south', 'char-higher', 'char-lower']
-        .map(a => keyDisplayName(bindings[a])).join(' ');
-    q('.panel.siz .panel-hotkey').textContent = keyDisplayName(bindings.size);
+    if (q('.panel.dir .panel-hotkey')) {
+      q('.panel.dir .panel-hotkey').textContent =
+        [bindings.west, bindings.north, bindings.south, bindings.east, bindings.above, bindings.below, bindings.position]
+          .map(keyDisplayName).join(' ');
+    }
+    if (q('.panel.snd .panel-hotkey')) q('.panel.snd .panel-hotkey').textContent = keyDisplayName(bindings.sound);
+    if (q('.panel.col .panel-hotkey')) q('.panel.col .panel-hotkey').textContent = keyDisplayName(bindings.color);
+    if (q('.panel.chr .panel-hotkey')) {
+      q('.panel.chr .panel-hotkey').textContent =
+        keyDisplayName(bindings.shape) + ' · ' +
+        ['char-north', 'char-west', 'char-east', 'char-south', 'char-higher', 'char-lower']
+          .map(a => keyDisplayName(bindings[a])).join(' ');
+    }
+    if (q('.panel.siz .panel-hotkey')) q('.panel.siz .panel-hotkey').textContent = keyDisplayName(bindings.size);
   }
   updateHotkeyLabels();
 
@@ -3481,7 +3468,8 @@ if (dp >= winThresh) {
         listeningAction = null;
         return;
       }
-      const newKey = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      let newKey = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (e.code === 'Numpad5') newKey = '5';
       bindings[listeningAction] = newKey;
       kbButtons[listeningAction].textContent = keyDisplayName(newKey);
       kbButtons[listeningAction].classList.remove('listening');
@@ -3496,7 +3484,12 @@ if (dp >= winThresh) {
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
 
-    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    let key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    
+    if (e.code === 'Numpad5' || key === 'clear') {
+      key = bindings.position;
+    }
+
     const mapping = keyMap[key];
     if (!mapping) return;
 
@@ -3604,7 +3597,6 @@ if (dp >= winThresh) {
   function getEnabledModalities() {
     const enabled = [];
 
-    if (positionOn.checked) enabled.push('Position');
     if (directionalOn.checked) enabled.push('Direction');
     if (soundOn.checked) enabled.push('Sound');
     if (colorOn.checked) enabled.push('Color');
@@ -3670,7 +3662,7 @@ if (dp >= winThresh) {
     document.getElementById('statsBestValue').textContent = bestCPI;
     document.getElementById('statsMinutesValue').textContent = `${totalMinutes}m`;
 
-    const modalitiesList = ['Position', 'Direction', 'Sound', 'Color', 'Character', 'Size'];
+    const modalitiesList = ['Direction', 'Sound', 'Color', 'Character', 'Size'];
     const aggregated = {};
     modalitiesList.forEach(mod => {
       aggregated[mod] = { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 };
@@ -3698,7 +3690,6 @@ if (dp >= winThresh) {
     if (breakdownPanel && barsContainer) {
       if (gamesWithModStatsCount > 0) {
         const colorsMap = {
-          'Position': 'var(--position-c)',
           'Direction': 'var(--direction-c)',
           'Sound': 'var(--sound-c)',
           'Color': 'var(--color-c)',
@@ -4257,7 +4248,6 @@ if (dp >= winThresh) {
       }
     };
 
-    syncPanel(positionOn, '.panel.pos');
     syncPanel(directionalOn, '.panel.dir');
     syncPanel(soundOn, '.panel.snd');
     syncPanel(colorOn, '.panel.col');
