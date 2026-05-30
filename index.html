@@ -3244,7 +3244,8 @@ if (dp >= winThresh) {
         if (oldN > 1) {
           nValue.value = oldN - 1;
           saveSettings();
-          showAutoProgressionToast(`Level Down. N decreased to ${nValue.value}`);
+          updateTopbarN();
+          showAutoProgressionToast(`Level Down: N decreased to ${nValue.value}`);
         }
         loseStreakCount = 0;
         saveSettings();
