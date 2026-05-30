@@ -602,19 +602,15 @@
     .compass .c-e { grid-column: 3; grid-row: 2; }
     .compass .c-up { grid-column: 1; grid-row: 1; }
     .compass .c-dn { grid-column: 3; grid-row: 3; }
-    .compass div.c-mid {
+    .compass .c-mid {
       grid-column: 2; grid-row: 2;
-      display: grid;
-      place-items: center;
-      font-size: 9px;
-      color: var(--text-faint);
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      font-weight: 700;
+    }
+    #positionBtn .ico {
+      font-size: 24px;
     }
 
-    .compass button.c-mid {
-      grid-column: 2; grid-row: 2;
+    #shapeBtn .ico {
+      font-size: 20px;
     }
 
     /* ---------- SETTINGS DRAWER ---------- */
@@ -1745,10 +1741,79 @@
     </div>
   </main>
 
-  <!-- RESPONSE DOCK -->
   <section class="dock-wrap">
     <div class="dock-title">Response Console</div>
     <div class="dock">
+
+      <div class="panel chr">
+        <div class="panel-header">
+          <div class="panel-title"><span class="bullet"></span>Character</div>
+          <span class="panel-hotkey">F · A W S D Q E</span>
+        </div>
+        <div class="compass">
+          <button class="response-btn c-n" data-char="char-north">
+            <span class="ico">↑</span><span class="lbl">Up</span>
+          </button>
+          <button class="response-btn c-w" data-char="char-west">
+            <span class="ico">←</span><span class="lbl">Left</span>
+          </button>
+          <button class="response-btn c-mid" id="shapeBtn">
+            <span class="ico">A</span>
+            <span class="lbl">Match</span>
+          </button>
+          <button class="response-btn c-e" data-char="char-east">
+            <span class="ico">→</span><span class="lbl">Right</span>
+          </button>
+          <button class="response-btn c-s" data-char="char-south">
+            <span class="ico">↓</span><span class="lbl">Down</span>
+          </button>
+          <button class="response-btn c-up" data-char="char-higher">
+            <span class="ico">+</span><span class="lbl">Higher</span>
+          </button>
+          <button class="response-btn c-dn" data-char="char-lower">
+            <span class="ico">−</span><span class="lbl">Lower</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel snd">
+        <div class="panel-header">
+          <div class="panel-title"><span class="bullet"></span>Sound</div>
+          <span class="panel-hotkey">Z</span>
+        </div>
+        <div class="grid-1">
+          <button class="response-btn big" id="soundBtn">
+            <span class="ico">♪</span>
+            <span>Sound Match</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel col">
+        <div class="panel-header">
+          <div class="panel-title"><span class="bullet"></span>Color</div>
+          <span class="panel-hotkey">X</span>
+        </div>
+        <div class="grid-1">
+          <button class="response-btn big" id="colorBtn">
+            <span class="ico">●</span>
+            <span>Color Match</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel siz">
+        <div class="panel-header">
+          <div class="panel-title"><span class="bullet"></span>Size</div>
+          <span class="panel-hotkey">C</span>
+        </div>
+        <div class="grid-1">
+          <button class="response-btn big" id="sizeBtn">
+            <span class="ico">⬚</span>
+            <span>Size Match</span>
+          </button>
+        </div>
+      </div>
 
       <div class="panel dir" style="max-width: 360px;">
         <div class="panel-header">
@@ -1777,79 +1842,6 @@
           </button>
           <button class="response-btn c-dn" data-dir="below">
             <span class="ico">▼</span><span class="lbl">Below</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="panel snd">
-        <div class="panel-header">
-          <div class="panel-title"><span class="bullet"></span>Sound</div>
-          <span class="panel-hotkey">S</span>
-        </div>
-        <div class="grid-1">
-          <button class="response-btn big" id="soundBtn">
-            <span class="ico">♪</span>
-            <span>Sound Match</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="panel col">
-        <div class="panel-header">
-          <div class="panel-title"><span class="bullet"></span>Color</div>
-          <span class="panel-hotkey">D</span>
-        </div>
-        <div class="grid-1">
-          <button class="response-btn big" id="colorBtn">
-            <span class="ico">●</span>
-            <span>Color Match</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="panel chr">
-        <div class="panel-header">
-          <div class="panel-title"><span class="bullet"></span>Character</div>
-          <span class="panel-hotkey">F · I J K L U O</span>
-        </div>
-        <div class="grid-1" style="margin-bottom: 8px;">
-          <button class="response-btn" id="shapeBtn">
-            <span class="ico">A</span>
-            <span>Glyph Match</span>
-          </button>
-        </div>
-        <div class="compass">
-          <button class="response-btn c-n" data-char="char-north">
-            <span class="ico">↑</span><span class="lbl">Up</span>
-          </button>
-          <button class="response-btn c-w" data-char="char-west">
-            <span class="ico">←</span><span class="lbl">Left</span>
-          </button>
-          <div class="c-mid">Grid</div>
-          <button class="response-btn c-e" data-char="char-east">
-            <span class="ico">→</span><span class="lbl">Right</span>
-          </button>
-          <button class="response-btn c-s" data-char="char-south">
-            <span class="ico">↓</span><span class="lbl">Down</span>
-          </button>
-          <button class="response-btn c-up" data-char="char-higher">
-            <span class="ico">+</span><span class="lbl">Higher</span>
-          </button>
-          <button class="response-btn c-dn" data-char="char-lower">
-            <span class="ico">−</span><span class="lbl">Lower</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="panel siz">
-        <div class="panel-header">
-          <div class="panel-title"><span class="bullet"></span>Size</div>
-          <span class="panel-hotkey">G</span>
-        </div>
-        <div class="grid-1">
-          <button class="response-btn big" id="sizeBtn">
-            <span class="ico">⬚</span>
-            <span>Size Match</span>
           </button>
         </div>
       </div>
@@ -3294,11 +3286,19 @@ if (dp >= winThresh) {
   const KEYBINDS_KEY = 'nback-keybinds-v1';
 
   const defaultBindings = {
-    'position': '5', 'sound': 's', 'color': 'd', 'shape': 'f', 'size': 'g',
+    'position': '5',
+    'sound': 'z',
+    'color': 'x',
+    'size': 'c',
+    'shape': 'f',
     'north': 'ArrowUp', 'south': 'ArrowDown', 'west': 'ArrowLeft',
     'east': 'ArrowRight', 'above': 'PageUp', 'below': 'PageDown',
-    'char-north': 'i', 'char-south': 'k', 'char-west': 'j',
-    'char-east': 'l', 'char-higher': 'u', 'char-lower': 'o',
+    'char-north': 'w',
+    'char-south': 's',
+    'char-west': 'a',
+    'char-east': 'd',
+    'char-higher': 'q',
+    'char-lower': 'e',
   };
 
   const actionElements = {
@@ -3381,7 +3381,7 @@ if (dp >= winThresh) {
     if (q('.panel.chr .panel-hotkey')) {
       q('.panel.chr .panel-hotkey').textContent =
         keyDisplayName(bindings.shape) + ' · ' +
-        ['char-north', 'char-west', 'char-east', 'char-south', 'char-higher', 'char-lower']
+        ['char-west', 'char-north', 'char-south', 'char-east', 'char-higher', 'char-lower']
           .map(a => keyDisplayName(bindings[a])).join(' ');
     }
     if (q('.panel.siz .panel-hotkey')) q('.panel.siz .panel-hotkey').textContent = keyDisplayName(bindings.size);
