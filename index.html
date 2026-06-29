@@ -3921,14 +3921,19 @@ if (acc >= winThresh) {
     const usableWidth = width - padding.left - padding.right;
     const usableHeight = height - padding.top - padding.bottom;
 
-    ctx.beginPath();
+    const minTime = chartData.length > 0 ? chartData[0].timestamp : 0;
+    const maxTime = chartData.length > 0 ? chartData[chartData.length - 1].timestamp : 0;
+    const timeRange = maxTime - minTime;
 
     const getChartX = (index) => {
-      if (chartData.length === 1) {
+      if (chartData.length === 1 || timeRange === 0) {
         return padding.left + usableWidth / 2;
       }
-      return padding.left + (usableWidth / (chartData.length - 1)) * index;
+      const item = chartData[index];
+      return padding.left + (usableWidth * (item.timestamp - minTime)) / timeRange;
     };
+
+    ctx.beginPath();
 
     chartData.forEach((item, index) => {
       const x = getChartX(index);
@@ -3981,21 +3986,30 @@ if (acc >= winThresh) {
     ctx.font = '10px Inter, system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
 
+    let lastDrawnX = -999;
+    const minLabelDistance = 55;
+
     chartData.forEach((item, index) => {
       const x = getChartX(index);
       const date = new Date(item.timestamp);
       const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       
       let drawLabel = false;
-      if (chartData.length <= 8) {
+      if (index === 0) {
         drawLabel = true;
-      } else if (chartData.length <= 14) {
-        drawLabel = (index % 2 === 0);
+      } else if (index === chartData.length - 1) {
+        if (x - lastDrawnX > minLabelDistance) {
+          drawLabel = true;
+        }
       } else {
-        drawLabel = (index % 3 === 0) || (index === chartData.length - 1);
+        const nextXOfLast = getChartX(chartData.length - 1);
+        if (x - lastDrawnX > minLabelDistance && nextXOfLast - x > minLabelDistance) {
+          drawLabel = true;
+        }
       }
       
       if (drawLabel) {
+        lastDrawnX = x;
         ctx.strokeStyle = 'rgba(120, 160, 230, 0.2)';
         ctx.beginPath();
         ctx.moveTo(x, padding.top + usableHeight);
