@@ -2000,6 +2000,11 @@
       <p>Local session history and progress overview</p>
     </div>
     <div class="stats-modal-controls">
+      <div style="display: flex; gap: 6px; margin-right: 14px;">
+        <button id="exportStatsBtn" class="btn" style="padding: 10px 16px; font-size: 13px; font-weight: 700; background: rgba(110, 231, 255, 0.1); border-color: rgba(110, 231, 255, 0.25); color: var(--accent);" title="Export backup to JSON">Export</button>
+        <button id="importStatsBtn" class="btn" style="padding: 10px 16px; font-size: 13px; background: rgba(255,255,255,0.04); border-color: var(--border); color: var(--text-dim);" title="Import backup from JSON">Import</button>
+        <input type="file" id="importStatsFile" accept=".json" style="display: none;" />
+      </div>
       <button class="stats-tab active" data-stats-view="recent">Recent Games</button>
       <button class="stats-tab" data-stats-view="progress">Progress Chart</button>
       <button class="icon-btn" id="closeStatsBtn">×</button>
@@ -2009,19 +2014,10 @@
   <div class="stats-modal-content">
     <div class="stats-view active" id="statsRecentView">
       <div class="stats-summary-grid">
-        <div class="stats-summary-card" style="justify-content: space-between;">
-          <div>
-            <div class="stats-summary-label">Sessions</div>
-            <div class="stats-summary-value" id="statsSessionsValue">0</div>
-          </div>
-          <div class="stats-summary-sub" style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
-            <span>Saved locally in your browser</span>
-            <div style="display: flex; gap: 6px;">
-              <button id="exportStatsBtn" class="btn" style="padding: 5px 10px; height: auto; font-size: 11px; background: rgba(110, 231, 255, 0.1); border-color: rgba(110, 231, 255, 0.25); color: var(--accent);" title="Export backup to JSON">Export</button>
-              <button id="importStatsBtn" class="btn" style="padding: 5px 10px; height: auto; font-size: 11px; background: rgba(255,255,255,0.04); border-color: var(--border);" title="Import backup from JSON">Import</button>
-              <input type="file" id="importStatsFile" accept=".json" style="display: none;" />
-            </div>
-          </div>
+        <div class="stats-summary-card">
+          <div class="stats-summary-label">Sessions</div>
+          <div class="stats-summary-value" id="statsSessionsValue">0</div>
+          <div class="stats-summary-sub">Saved locally in your browser</div>
         </div>
 
         <div class="stats-summary-card">
