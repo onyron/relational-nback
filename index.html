@@ -1041,6 +1041,10 @@
       display: none !important;
     }
 
+    body.game-active.hide-axes .axes {
+      display: none !important;
+    }
+
     body.game-active #startBtn {
       background: rgba(248, 113, 113, 0.1);
       border-color: rgba(248, 113, 113, 0.4);
@@ -1875,6 +1879,10 @@
       <label>Rotation (seconds)</label>
       <input type="number" id="rotationSpeed" value="13" min="1" />
     </div>
+    <label class="toggle-row">
+      <span class="tr-label"><span class="tr-icon">┼</span>Show Axes</span>
+      <input type="checkbox" id="showAxesOn">
+    </label>
   </div>
 
   <div class="settings-section">
@@ -2127,6 +2135,7 @@
   const responseConsole = document.querySelector('.dock-wrap');
 
   const directionalOn = document.getElementById('directionalOn');
+  const showAxesOn = document.getElementById('showAxesOn');
   const soundOn = document.getElementById('soundOn');
   const colorOn = document.getElementById('colorOn');
   const shapeOn = document.getElementById('shapeOn');
@@ -3088,8 +3097,17 @@ function nextStimulus() {
     { el: apWinThreshold,      key: 'apWinThreshold',      prop: 'value' },
     { el: apWinStreak,         key: 'apWinStreak',         prop: 'value' },
     { el: apLoseThreshold,     key: 'apLoseThreshold',     prop: 'value' },
-    { el: apLoseStreak,        key: 'apLoseStreak',        prop: 'value' }
+    { el: apLoseStreak,        key: 'apLoseStreak',        prop: 'value' },
+    { el: showAxesOn, key: 'showAxesOn', prop: 'checked' }
   ];
+
+  function updateAxesUi() {
+    if (showAxesOn.checked) {
+      document.body.classList.remove('hide-axes');
+    } else {
+      document.body.classList.add('hide-axes');
+    }
+  }
 
   function saveSettings() {
     const data = {};
@@ -3269,6 +3287,11 @@ if (dp >= winThresh) {
     updateTopbarN();
   });
 
+  showAxesOn.addEventListener('change', () => {
+    saveSettings();
+    updateAxesUi();
+  });
+
   loadSettings();
   updateRotationTempoCache();
   loadMinutesToday();
@@ -3281,6 +3304,7 @@ if (dp >= winThresh) {
   updateModalitiesUi();
   updateAutoProgressionUi();
   updateTopbarN();
+  updateAxesUi();
 
   // --- customizable keybinds ---
   const KEYBINDS_KEY = 'nback-keybinds-v1';
