@@ -279,6 +279,7 @@
     .cell.active .cell-face {
       background: rgba(110, 231, 255, 0.6);
       box-shadow: 0 0 10px rgba(110, 231, 255, 0.6), inset 0 0 8px rgba(255,255,255,0.3);
+      transition: none !important;
     }
 
 /* ---------- AXES ---------- */
@@ -1623,7 +1624,7 @@
       box-shadow: 0 0 8px var(--accent);
     }
     .cpi-tooltip-trigger::after {
-      content: "CPI (Cognitive Performance Index) = d' × N × Sum of modality weights.Reflects actual workload: higher levels of N and the addition of new modalities increase this score, even if net accuracy d' temporarily decreases.";
+      content: "CPI (Cognitive Performance Index) = (Accuracy/100) × N × Sum of modality weights. Reflects actual workload: higher levels of N and the addition of new modalities increase this score, even if net accuracy temporarily decreases.";
       position: absolute;
       bottom: 130%;
       right: 0;
@@ -1695,7 +1696,7 @@
       <div class="stat-card">
         <div class="stat-icon good">✓</div>
         <div>
-          <div class="stat-label">d'</div>
+          <div class="stat-label">Accuracy</div>
           <div class="stat-value" id="accuracy">—</div>
         </div>
       </div>
@@ -1881,7 +1882,7 @@
     </div>
     <label class="toggle-row">
       <span class="tr-label"><span class="tr-icon">┼</span>Show Axes</span>
-      <input type="checkbox" id="showAxesOn">
+      <input type="checkbox" id="showAxesOn" checked>
     </label>
   </div>
 
@@ -1929,20 +1930,20 @@
     </label>
     <div id="autoProgressionControls" style="display: none; margin-top: 10px;">
       <div class="setting-group">
-        <label id="apWinThresholdLabel">When d' >= 2.5</label>
-        <input type="range" id="apWinThreshold" min="1.0" max="4.0" step="0.1" value="2.5" class="ap-slider" />
+        <label id="apWinThresholdLabel">Win Threshold</label>
+        <input type="range" id="apWinThreshold" min="50" max="100" step="1" value="80" class="ap-slider" />
       </div>
       <div class="setting-group">
-        <label id="apWinStreakLabel">Win after: 2 in a row</label>
-        <input type="range" id="apWinStreak" min="1" max="10" step="1" value="2" class="ap-slider" />
+        <label id="apWinStreakLabel">Win Streak</label>
+        <input type="range" id="apWinStreak" min="1" max="10" step="1" value="1" class="ap-slider" />
       </div>
       <div class="setting-group">
-        <label id="apLoseThresholdLabel">When d' < 1.2</label>
-        <input type="range" id="apLoseThreshold" min="0.0" max="2.0" step="0.1" value="1.2" class="ap-slider" />
+        <label id="apLoseThresholdLabel">Lose Threshold</label>
+        <input type="range" id="apLoseThreshold" min="10" max="70" step="1" value="50" class="ap-slider" />
       </div>
       <div class="setting-group">
-        <label id="apLoseStreakLabel">Lose after: 2 in a row</label>
-        <input type="range" id="apLoseStreak" min="1" max="10" step="1" value="2" class="ap-slider" />
+        <label id="apLoseStreakLabel">Lose Streak</label>
+        <input type="range" id="apLoseStreak" min="1" max="10" step="1" value="1" class="ap-slider" />
       </div>
     </div>
   </div> 
@@ -2044,7 +2045,7 @@
       
       <div class="stats-card-panel" id="statsModalityBreakdownPanel" style="margin-bottom: 18px; display: none;">
         <div class="stats-panel-title">
-          <h3>Modality Sensitivity Breakdown (d' over last 15 games)</h3>
+          <h3>Modality Accuracy Breakdown (last 15 games)</h3>
         </div>
         <div id="statsModalityBars" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 12px;"></div>
       </div>
@@ -2056,7 +2057,7 @@
               <th>Date</th>
               <th>Game</th>
               <th>CPI</th>
-              <th>Overall d'</th>
+              <th>Accuracy</th>
               <th>Trials</th>
               <th>Modalities</th>
               <th>Time</th>
@@ -2181,23 +2182,21 @@
 
   let currentIntervalResponses = new Set();
 
-  let hits = 0;
-  let falseAlarmsCount = 0;
-  let targetsCount = 0;
-  let nonTargetsCount = 0;
+  let correct = 0;
+  let total = 0;
 
   // --- MODALITY TRACKING SYSTEM ---
   let modalityStats = {
-    'Direction': { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
-    'Sound':     { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
-    'Color':     { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
-    'Character': { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 },
-    'Size':      { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 }
+    'Direction': { correct: 0, total: 0 },
+    'Sound':     { correct: 0, total: 0 },
+    'Color':     { correct: 0, total: 0 },
+    'Character': { correct: 0, total: 0 },
+    'Size':      { correct: 0, total: 0 }
   };
 
   function resetModalityStats() {
     for (const mod in modalityStats) {
-      modalityStats[mod] = { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 };
+      modalityStats[mod] = { correct: 0, total: 0 };
     }
   }
 
@@ -2211,59 +2210,7 @@
     return null;
   }
 
-  function getModalitySubFeatures(modality) {
-    if (modality === 'Direction') return ['north', 'south', 'east', 'west', 'above', 'below', 'position'];
-    if (modality === 'Sound') return ['sound'];
-    if (modality === 'Color') return ['color'];
-    if (modality === 'Character') return ['shape', 'char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'];
-    if (modality === 'Size') return ['size'];
-    return [];
-  }
-
-  function p2z(p) {
-    if (p <= 0) return -3.5;
-    if (p >= 1) return 3.5;
-    
-    const c0 = 2.515517;
-    const c1 = 0.802853;
-    const c2 = 0.010328;
-    const d1 = 1.432788;
-    const d2 = 0.189269;
-    const d3 = 0.001308;
-    
-    let t;
-    if (p < 0.5) {
-      t = Math.sqrt(-2.0 * Math.log(p));
-      return -(t - ((c2 * t + c1) * t + c0) / (((d3 * t + d2) * t + d1) * t + 1.0));
-    } else {
-      t = Math.sqrt(-2.0 * Math.log(1.0 - p));
-      return t - ((c2 * t + c1) * t + c0) / (((d3 * t + d2) * t + d1) * t + 1.0);
-    }
-  }
-
-  function calculateDPrime() {
-    const activeModalities = getEnabledModalities();
-    if (activeModalities.length === 0) return 0;
-    
-    let sumD = 0;
-    let count = 0;
-    
-    activeModalities.forEach(mod => {
-      const stats = modalityStats[mod];
-      if (stats && (stats.targets > 0 || stats.nonTargets > 0)) {
-        const dp = calculateModalityDPrime(stats.hits, stats.falseAlarms, stats.targets, stats.nonTargets);
-        if (dp !== null) {
-          sumD += dp;
-          count++;
-        }
-      }
-    });
-    
-    return count > 0 ? sumD / count : 0;
-  }
-
-  function calculateCPI(dPrime, n, activeModalities) {
-    const cleanD = Math.max(0, dPrime);
+  function calculateCPI(accuracyDecimal, n, activeModalities) {
     const weights = {
       'Sound': 1.0,
       'Color': 0.8,
@@ -2279,28 +2226,7 @@
     } else {
       modalitySum = 1.0;
     }
-    return Number((cleanD * n * modalitySum).toFixed(2));
-  }
-
-  function calculateModalityDPrime(hits, falseAlarms, targets, nonTargets) {
-    if (targets === 0 || nonTargets === 0) return null;
-    const adjustedHitRate = (hits + 0.5) / (targets + 1);
-    const adjustedFarRate = (falseAlarms + 0.5) / (nonTargets + 1);
-    return p2z(adjustedHitRate) - p2z(adjustedFarRate);
-  }
-
-  function getActiveFeatures() {
-    const list = [];
-    if (soundOn.checked) list.push('sound');
-    if (colorOn.checked) list.push('color');
-    if (sizeOn.checked) list.push('size');
-    if (directionalOn.checked) {
-      list.push('north', 'south', 'east', 'west', 'above', 'below', 'position');
-    }
-    if (shapeOn.checked) {
-      list.push('shape', 'char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower');
-    }
-    return list;
+    return Number((accuracyDecimal * n * modalitySum).toFixed(2));
   }
 
   function initTimerWorker() {
@@ -2768,7 +2694,13 @@ function nextStimulus() {
 
     if (history.length > n) {
       if (expected.size > 0) {
+        total += expected.size;
+        expected.forEach(feat => {
+          const mod = getModalityOfFeature(feat);
+          if (mod) modalityStats[mod].total++;
+        });
         expected.clear();
+        updateAccuracy();
       }
     } else {
       expected.clear();
@@ -2855,30 +2787,14 @@ function nextStimulus() {
 
       if (sizeOn.checked && a.size === b.size) expected.add('size');
 
-      const activeFeatures = getActiveFeatures();
-      targetsCount += expected.size;
-      nonTargetsCount += (activeFeatures.length - expected.size);
-
-      const activeModalities = getEnabledModalities();
-      activeModalities.forEach(mod => {
-        const subFeatures = getModalitySubFeatures(mod);
-        subFeatures.forEach(feat => {
-          if (expected.has(feat)) {
-            modalityStats[mod].targets++;
-          } else {
-            modalityStats[mod].nonTargets++;
-          }
-        });
-      });
-    }
+      }
 
     intervalCount++;
     intervalCountEl.textContent = intervalCount;
   }
 
   function updateAccuracy() {
-    const dp = calculateDPrime();
-    accuracyEl.textContent = (targetsCount > 0 || nonTargetsCount > 0) ? dp.toFixed(2) : '—';
+    accuracyEl.textContent = total > 0 ? `${Math.round((correct / total) * 100)}%` : '—';
   }
 
   function respond(type) {
@@ -2919,13 +2835,14 @@ function nextStimulus() {
     const n = +nValue.value;
     if (history.length > n) {
       const mod = getModalityOfFeature(type);
+      total++;
+      if (mod) modalityStats[mod].total++;
+      
       if (expected.has(type)) {
-        hits++;
-        if (mod) modalityStats[mod].hits++;
+        correct++;
+        if (mod) modalityStats[mod].correct++;
         expected.delete(type);
       } else {
-        falseAlarmsCount++;
-        if (mod) modalityStats[mod].falseAlarms++;
         falseAlarms.add(type);
       }
       updateAccuracy();
@@ -2955,10 +2872,8 @@ function nextStimulus() {
       currentIntervalResponses.clear();
       hideFeedback();
       intervalCount = 0;
-      hits = 0;
-      falseAlarmsCount = 0;
-      targetsCount = 0;
-      nonTargetsCount = 0;
+      correct = 0;
+      total = 0;
       resetModalityStats();
       updateAccuracy();
       intervalCountEl.textContent = '0';
@@ -3017,7 +2932,7 @@ function nextStimulus() {
     hideFeedback();
     hideCharReference();
 
-    if (sessionStart && intervalCount > 0 && (targetsCount > 0 || nonTargetsCount > 0)) {
+    if (sessionStart && intervalCount > 0 && total > 0) {
       if (naturalEnd || infiniteModeOn.checked) {
         saveCurrentSession(playedN);
       }
@@ -3166,9 +3081,9 @@ function nextStimulus() {
       autoProgressionControls.style.display = 'none';
     }
     
-    apWinThresholdLabel.textContent = `When d' >= ${parseFloat(apWinThreshold.value).toFixed(1)}`;
+    apWinThresholdLabel.textContent = `When Accuracy >= ${apWinThreshold.value}%`;
     apWinStreakLabel.textContent = `Win after: ${apWinStreak.value} in a row`;
-    apLoseThresholdLabel.textContent = `When d' < ${parseFloat(apLoseThreshold.value).toFixed(1)}`;
+    apLoseThresholdLabel.textContent = `When Accuracy < ${apLoseThreshold.value}%`;
     apLoseStreakLabel.textContent = `Lose after: ${apLoseStreak.value} in a row`;
 
     updateSliderBackground(apWinThreshold);
@@ -3205,18 +3120,15 @@ function nextStimulus() {
   function checkAutoProgression() {
     if (!autoProgressionOn.checked) return;
 
-    if (expected.size) {
-      expected.clear();
-    }
+    let currentTotal = total + expected.size;
+    const acc = currentTotal > 0 ? (correct / currentTotal) * 100 : 0;
     
-    const dp = calculateDPrime();
-    
-    const winThresh = parseFloat(apWinThreshold.value);
+    const winThresh = parseInt(apWinThreshold.value, 10);
     const winStreakReq = parseInt(apWinStreak.value, 10);
-    const loseThresh = parseFloat(apLoseThreshold.value);
+    const loseThresh = parseInt(apLoseThreshold.value, 10);
     const loseStreakReq = parseInt(apLoseStreak.value, 10);
 
-if (dp >= winThresh) {
+if (acc >= winThresh) {
       winStreakCount++;
       loseStreakCount = 0;
       saveSettings();
@@ -3229,7 +3141,7 @@ if (dp >= winThresh) {
         saveSettings();
         showAutoProgressionToast(`Level Up! N increased to ${nValue.value}`);
       }
-    } else if (dp < loseThresh) {
+    } else if (acc < loseThresh) {
       loseStreakCount++;
       winStreakCount = 0;
       saveSettings();
@@ -3630,27 +3542,27 @@ if (dp >= winThresh) {
     return enabled;
   }
 
-  function getDPrimeClass(dp) {
-    if (dp >= 2.5) return 'good';
-    if (dp >= 1.2) return 'mid';
+  function getAccuracyClass(acc) {
+    if (acc >= 80) return 'good';
+    if (acc >= 40) return 'mid';
     return 'bad';
   }
 
   function saveCurrentSession(overrideN = null) {
-    if (!intervalCount || (targetsCount === 0 && nonTargetsCount === 0)) {
+    if (!intervalCount || total === 0) {
       return;
     }
 
     const historyData = loadSessionHistory();
-    const dPrimeValue = parseFloat(calculateDPrime().toFixed(2));
+    const accValue = Math.round((correct / total) * 100);
     const duration = sessionStart ? Math.max(1, Math.round((Date.now() - sessionStart) / 1000)) : 0;
     const activeModes = getEnabledModalities();
 
     historyData.unshift({
       timestamp: Date.now(),
-      dPrime: dPrimeValue,
-      correct: hits,
-      total: targetsCount + nonTargetsCount,
+      accuracy: accValue,
+      correct: correct,
+      total: total,
       trials: intervalCount,
       duration,
       n: overrideN !== null ? overrideN : Number(nValue.value),
@@ -3675,7 +3587,7 @@ if (dp >= winThresh) {
       return;
     }
 
-    const cpiList = historyData.map(item => calculateCPI(item.dPrime || 0, item.n || 1, item.modalities));
+    const cpiList = historyData.map(item => calculateCPI((item.accuracy || 0) / 100, item.n || 1, item.modalities));
     const sumCPI = cpiList.reduce((sum, val) => sum + val, 0);
     const avgCPI = (sumCPI / historyData.length).toFixed(2);
     
@@ -3689,7 +3601,7 @@ if (dp >= winThresh) {
     const modalitiesList = ['Direction', 'Sound', 'Color', 'Character', 'Size'];
     const aggregated = {};
     modalitiesList.forEach(mod => {
-      aggregated[mod] = { hits: 0, falseAlarms: 0, targets: 0, nonTargets: 0 };
+      aggregated[mod] = { correct: 0, total: 0 };
     });
 
     let gamesWithModStatsCount = 0;
@@ -3699,10 +3611,8 @@ if (dp >= winThresh) {
         gamesWithModStatsCount++;
         modalitiesList.forEach(mod => {
           if (game.modalityStats[mod]) {
-            aggregated[mod].hits += (game.modalityStats[mod].hits || 0);
-            aggregated[mod].falseAlarms += (game.modalityStats[mod].falseAlarms || 0);
-            aggregated[mod].targets += (game.modalityStats[mod].targets || 0);
-            aggregated[mod].nonTargets += (game.modalityStats[mod].nonTargets || 0);
+            aggregated[mod].correct += (game.modalityStats[mod].correct || 0);
+            aggregated[mod].total += (game.modalityStats[mod].total || 0);
           }
         });
       }
@@ -3723,21 +3633,19 @@ if (dp >= winThresh) {
 
         const barHtml = modalitiesList.map(mod => {
           const stats = aggregated[mod];
-          const dPrime = calculateModalityDPrime(stats.hits, stats.falseAlarms, stats.targets, stats.nonTargets);
+          if (stats.total === 0) return '';
           
-          if (dPrime === null) return '';
-          
+          const acc = Math.round((stats.correct / stats.total) * 100);
           const color = colorsMap[mod];
-          const percentage = Math.min(100, Math.max(0, (dPrime / 4.0) * 100));
 
           return `
             <div style="background: rgba(255,255,255,0.015); border: 1px solid rgba(120, 160, 230, 0.08); padding: 14px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
               <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim);">
                 <span>${mod}</span>
-                <span style="color: ${color}; font-weight: bold;">d': ${dPrime.toFixed(2)}</span>
+                <span style="color: ${color}; font-weight: bold;">${acc}%</span>
               </div>
               <div style="height: 6px; background: rgba(255,255,255,0.04); border-radius: 999px; overflow: hidden; width: 100%;">
-                <div style="height: 100%; width: ${percentage}%; background: ${color}; box-shadow: 0 0 8px ${color}; border-radius: 999px;"></div>
+                <div style="height: 100%; width: ${acc}%; background: ${color}; box-shadow: 0 0 8px ${color}; border-radius: 999px;"></div>
               </div>
             </div>
           `;
@@ -3753,19 +3661,18 @@ if (dp >= winThresh) {
     statsRecentBody.innerHTML = historyData.slice(0, 20).map(item => {
       const gameLabel = `${item.n}-Back · ${item.dimension}×${item.dimension}×${item.dimension}`;
       
-      const dp = item.dPrime || 0;
-      const cpi = calculateCPI(dp, item.n || 1, item.modalities);
+      const acc = item.accuracy || 0;
+      const cpi = calculateCPI(acc / 100, item.n || 1, item.modalities);
 
       const modalities = item.modalities.map(mode => {
-        let modDPrimeStr = '';
+        let modAccStr = '';
         if (item.modalityStats && item.modalityStats[mode]) {
           const stats = item.modalityStats[mode];
-          const modDP = calculateModalityDPrime(stats.hits, stats.falseAlarms, stats.targets, stats.nonTargets);
-          if (modDP !== null) {
-            modDPrimeStr = ` · ${modDP.toFixed(1)}`;
+          if (stats.total > 0) {
+            modAccStr = ` · ${Math.round((stats.correct / stats.total) * 100)}%`;
           }
         }
-        return `<span class="stats-chip">${mode}${modDPrimeStr}</span>`;
+        return `<span class="stats-chip">${mode}${modAccStr}</span>`;
       }).join('');
 
       return `
@@ -3778,8 +3685,8 @@ if (dp >= winThresh) {
             </span>
           </td>
           <td>
-            <span class="stats-pill ${getDPrimeClass(dp)}" style="white-space: nowrap;">
-              ${dp.toFixed(2)}
+            <span class="stats-pill ${getAccuracyClass(acc)}" style="white-space: nowrap;">
+              ${acc}%
             </span>
           </td>
           <td>${item.trials}</td>
@@ -3960,7 +3867,7 @@ if (dp >= winThresh) {
       }
 
       const day = daily.get(key);
-      const itemCPI = calculateCPI(item.dPrime || 0, item.n || 1, item.modalities);
+      const itemCPI = calculateCPI((item.accuracy || 0) / 100, item.n || 1, item.modalities);
       day.cpiTotal += itemCPI;
       day.sessions++;
     });
