@@ -2424,7 +2424,13 @@ let t = now + rotationState.timeOffset;
 
     currentRotationMatrix.preMultiplySelf(incrementalRotation);
 
-    normalizeMatrix(currentRotationMatrix);
+    if (rotationState.frameCount === undefined) {
+      rotationState.frameCount = 0;
+    }
+    rotationState.frameCount++;
+    if (rotationState.frameCount % 60 === 0) {
+      normalizeMatrix(currentRotationMatrix);
+    }
   }
 
   function setRandomRotation() {
