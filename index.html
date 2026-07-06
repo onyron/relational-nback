@@ -964,7 +964,6 @@
         to   { opacity: 1; transform: translate(-50%, 0); }
       }
     }
-    .feedback-toast.visible { display: flex; }
     .feedback-toast .fb-line {
       display: flex;
       align-items: center;
@@ -1059,12 +1058,12 @@
       align-items: center;
       padding: 60px 24px;
     }
-    button:focus,
-    .btn:focus,
-    .icon-btn:focus,
-    .response-btn:focus {
-      outline: none !important;
-      box-shadow: none !important;
+    button:focus-visible,
+    .btn:focus-visible,
+    .icon-btn:focus-visible,
+    .response-btn:focus-visible {
+      outline: 2px solid var(--accent) !important;
+      outline-offset: 2px;
     }
 
 
@@ -2600,6 +2599,9 @@ function computeSmartRotation(now) {
     gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
     
     osc.connect(gain).connect(audioCtx.destination);
+    osc.onended = () => {
+      gain.disconnect();
+    };
     osc.start();
     osc.stop(audioCtx.currentTime + 0.15);
   }
@@ -2875,8 +2877,8 @@ function respond(type) {
         sessionStart = Date.now();
         initTimerWorker();
         gameActive = true;
-        const msVal = parseInt(intervalMs.value, 10) || 2500;
-        const isiVal = parseInt(isiMs.value, 10) || 350;
+        const msVal = Math.max(500, parseInt(intervalMs.value, 10) || 2500);
+        const isiVal = Math.min(msVal - 100, Math.max(50, parseInt(isiMs.value, 10) || 350));
         const activeDur = Math.max(50, msVal - isiVal);
         timerWorker.postMessage({
           action: 'start',
@@ -4121,7 +4123,9 @@ if (acc >= winThresh) {
         statsViews.recent.classList.add('active');
       } else {
         statsViews.progress.classList.add('active');
-        setTimeout(renderProgressChart, 10);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(renderProgressChart);
+        });
       }
     });
   });
@@ -4185,7 +4189,5 @@ if (acc >= winThresh) {
     syncPanel(sizeOn, '.panel.siz');
   }
 </script>
-
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
