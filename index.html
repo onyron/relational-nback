@@ -2251,6 +2251,7 @@
     timerWorker = new Worker(url);
     URL.revokeObjectURL(url); 
     timerWorker.onmessage = function(e) {
+      if (!gameActive) return;
       if (e.data.type === 'stimulus') {
         nextStimulus();
       } else if (e.data.type === 'clear') {
@@ -2600,6 +2601,7 @@ function computeSmartRotation(now) {
     
     osc.connect(gain).connect(audioCtx.destination);
     osc.onended = () => {
+      osc.disconnect();
       gain.disconnect();
     };
     osc.start();
@@ -3408,11 +3410,9 @@ if (acc >= winThresh) {
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
 
     let key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    
     if (e.code === 'Numpad5' || key === 'clear') {
-      key = bindings.position;
+      key = '5';
     }
-
     const mapping = keyMap[key];
     if (!mapping) return;
 
