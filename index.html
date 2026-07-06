@@ -2271,21 +2271,6 @@
     size: 'Size'
   };
 
-  const opposites = {
-    'north': 'south',
-    'south': 'north',
-    'east': 'west',
-    'west': 'east',
-    'above': 'below',
-    'below': 'above',
-    'char-north': 'char-south',
-    'char-south': 'char-north',
-    'char-east': 'char-west',
-    'char-west': 'char-east',
-    'char-higher': 'char-lower',
-    'char-lower': 'char-higher'
-  };
-
   let sessionStart = null;
   let minutesToday = 0;
 
@@ -2354,84 +2339,81 @@
   }
 
 function computeSmartRotation(now) {
-    const DEG_TO_RAD = Math.PI / 180;
-    const RAD_TO_DEG = 180 / Math.PI;
-
-    let firstFrame = false;
-    if (rotationState.currentAxis === undefined) {
-      rotationState.currentAxis = new Float64Array(3);
-      rotationState.timeOffset = Math.random() * 10000000;
-      firstFrame = true;
-    }
-
-    if (!rotationState.lastTime) {
-      rotationState.lastTime = now;
-    }
-    let dt = (now - rotationState.lastTime) * 0.001;
-    rotationState.lastTime = now;
-    if (dt > 0.1) {
-      dt = 0.1;
-    }
-
-let t = now + rotationState.timeOffset;
-
-      let theta = t * 0.00015 
-                + Math.sin(t * 0.0006 * Math.SQRT2) * 0.9 
-                + Math.cos(t * 0.001 * Math.sqrt(3)) * 0.35;
-                
-      let phi = Math.sin(t * 0.0004 * Math.sqrt(5)) * 0.95 
-              + Math.cos(t * 0.0008 * 1.6180339887) * 0.45 
-              + Math.sin(t * 0.001 * Math.LN10) * 0.15;
-
-    let tx = Math.cos(phi) * Math.cos(theta);
-    let ty = Math.cos(phi) * Math.sin(theta);
-    let tz = Math.sin(phi);
-
-    if (firstFrame) {
-      rotationState.currentAxis[0] = tx;
-      rotationState.currentAxis[1] = ty;
-      rotationState.currentAxis[2] = tz;
-    } else {
-      rotationState.currentAxis[0] += (tx - rotationState.currentAxis[0]) * dt * 1.0;
-      rotationState.currentAxis[1] += (ty - rotationState.currentAxis[1]) * dt * 1.0;
-      rotationState.currentAxis[2] += (tz - rotationState.currentAxis[2]) * dt * 1.0;
-    }
-
-    let len = Math.sqrt(
-      rotationState.currentAxis[0] * rotationState.currentAxis[0] +
-      rotationState.currentAxis[1] * rotationState.currentAxis[1] +
-      rotationState.currentAxis[2] * rotationState.currentAxis[2]
-    );
-    if (len > 0) {
-      rotationState.currentAxis[0] /= len;
-      rotationState.currentAxis[1] /= len;
-      rotationState.currentAxis[2] /= len;
-    }
-
-    rotationState.velocities[0] = rotationState.currentAxis[0] * baseRotationSpeedDegSec;
-    rotationState.velocities[1] = rotationState.currentAxis[1] * baseRotationSpeedDegSec;
-    rotationState.velocities[2] = rotationState.currentAxis[2] * baseRotationSpeedDegSec;
-
-    let angle = baseRotationSpeedDegSec * dt;
-
-    let incrementalRotation = new DOMMatrix();
-    incrementalRotation.rotateAxisAngleSelf(
-      rotationState.currentAxis[0],
-      rotationState.currentAxis[1],
-      rotationState.currentAxis[2],
-      angle
-    );
-
-    currentRotationMatrix.preMultiplySelf(incrementalRotation);
-
-    if (rotationState.frameCount === undefined) {
-      rotationState.frameCount = 0;
-    }
-    rotationState.frameCount++;
-    if (rotationState.frameCount % 60 === 0) {
-      normalizeMatrix(currentRotationMatrix);
-    }
+  let firstFrame = false;
+  if (rotationState.currentAxis === undefined) {
+    rotationState.currentAxis = new Float64Array(3);
+    rotationState.timeOffset = Math.random() * 10000000;
+    firstFrame = true;
   }
+
+  if (!rotationState.lastTime) {
+    rotationState.lastTime = now;
+  }
+  let dt = (now - rotationState.lastTime) * 0.001;
+  rotationState.lastTime = now;
+  if (dt > 0.1) {
+    dt = 0.1;
+  }
+
+  let t = now + rotationState.timeOffset;
+
+  let theta = t * 0.00015 
+            + Math.sin(t * 0.0006 * Math.SQRT2) * 0.9 
+            + Math.cos(t * 0.001 * Math.sqrt(3)) * 0.35;
+            
+  let phi = Math.sin(t * 0.0004 * Math.sqrt(5)) * 0.95 
+          + Math.cos(t * 0.0008 * 1.6180339887) * 0.45 
+          + Math.sin(t * 0.001 * Math.LN10) * 0.15;
+
+  let tx = Math.cos(phi) * Math.cos(theta);
+  let ty = Math.cos(phi) * Math.sin(theta);
+  let tz = Math.sin(phi);
+
+  if (firstFrame) {
+    rotationState.currentAxis[0] = tx;
+    rotationState.currentAxis[1] = ty;
+    rotationState.currentAxis[2] = tz;
+  } else {
+    rotationState.currentAxis[0] += (tx - rotationState.currentAxis[0]) * dt * 1.0;
+    rotationState.currentAxis[1] += (ty - rotationState.currentAxis[1]) * dt * 1.0;
+    rotationState.currentAxis[2] += (tz - rotationState.currentAxis[2]) * dt * 1.0;
+  }
+
+  let len = Math.sqrt(
+    rotationState.currentAxis[0] * rotationState.currentAxis[0] +
+    rotationState.currentAxis[1] * rotationState.currentAxis[1] +
+    rotationState.currentAxis[2] * rotationState.currentAxis[2]
+  );
+  if (len > 0) {
+    rotationState.currentAxis[0] /= len;
+    rotationState.currentAxis[1] /= len;
+    rotationState.currentAxis[2] /= len;
+  }
+
+  rotationState.velocities[0] = rotationState.currentAxis[0] * baseRotationSpeedDegSec;
+  rotationState.velocities[1] = rotationState.currentAxis[1] * baseRotationSpeedDegSec;
+  rotationState.velocities[2] = rotationState.currentAxis[2] * baseRotationSpeedDegSec;
+
+  let angle = baseRotationSpeedDegSec * dt;
+
+  let incrementalRotation = new DOMMatrix();
+  incrementalRotation.rotateAxisAngleSelf(
+    rotationState.currentAxis[0],
+    rotationState.currentAxis[1],
+    rotationState.currentAxis[2],
+    angle
+  );
+
+  currentRotationMatrix.preMultiplySelf(incrementalRotation);
+
+  if (rotationState.frameCount === undefined) {
+    rotationState.frameCount = 0;
+  }
+  rotationState.frameCount++;
+  if (rotationState.frameCount % 60 === 0) {
+    normalizeMatrix(currentRotationMatrix);
+  }
+}
 
   function setRandomRotation() {
     const u1 = Math.random();
@@ -2665,141 +2647,148 @@ let t = now + rotationState.timeOffset;
     feedbackToast.classList.remove('visible');
   }
 
-function applySoftTorqueImpulse() {
-}
-
 function nextStimulus() {
-    const maxTrials = +numTrials.value;
+  const maxTrials = +numTrials.value;
+  const n = +nValue.value;
 
-    applySoftTorqueImpulse();
+  let missed = [];
+  let wrong = [];
 
-    currentIntervalResponses.clear();
+  if (history.length > n) {
+    const featuresOfInterest = new Set([...expected, ...currentIntervalResponses]);
+    
+    if (featuresOfInterest.size > 0) {
+      featuresOfInterest.forEach(feat => {
+        const mod = getModalityOfFeature(feat);
+        
+        total++;
+        if (mod) modalityStats[mod].total++;
 
-    const n = +nValue.value;
-
-    const missed = [...expected];
-    const wrong = [...falseAlarms];
-
-    const showFb = (feedbackMode.value === 'show' || feedbackMode.value === 'hideCounter');
-    if (showFb && (missed.length || wrong.length)) {
-      showFeedback(missed, wrong);
-    } else {
-      hideFeedback();
-    }
-
-    if (history.length > n) {
-      if (expected.size > 0) {
-        total += expected.size;
-        expected.forEach(feat => {
-          const mod = getModalityOfFeature(feat);
-          if (mod) modalityStats[mod].total++;
-        });
-        expected.clear();
-        updateAccuracy();
-      }
-    } else {
+        if (expected.has(feat) && currentIntervalResponses.has(feat)) {
+          correct++;
+          if (mod) modalityStats[mod].correct++;
+        } else if (!expected.has(feat) && currentIntervalResponses.has(feat)) {
+          falseAlarms.add(feat);
+          wrong.push(feat);
+        } else if (expected.has(feat) && !currentIntervalResponses.has(feat)) {
+          missed.push(feat);
+        }
+      });
+      
       expected.clear();
+      updateAccuracy();
     }
-
-    falseAlarms.clear();
-
-    if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
-      const currentN = Number(nValue.value);
-      checkAutoProgression();
-      stopGame(true, currentN);
-      return;
-    }
-
-    clearCells();
-
-    const cellIndex = Math.floor(Math.random()*cells.length);
-    const cell = cells[cellIndex];
-    cell.classList.add('active');
-
-    let sound = null;
-    let color = null;
-    let shape = null;
-    let size = null;
-
-    if (soundOn.checked) {
-      sound = sounds[Math.floor(Math.random()*sounds.length)];
-      playTone(sound);
-    }
-
-    if (colorOn.checked) {
-      color = colors[Math.floor(Math.random()*colors.length)];
-      cell.querySelectorAll('.cell-face').forEach(f => f.style.background = color);
-    }
-
-    if (shapeOn.checked) {
-      const setNames = Object.keys(charSets);
-      const set = setNames[Math.floor(Math.random()*setNames.length)];
-      const idx = Math.floor(Math.random()*charSets[set].length);
-      shape = { set, idx };
-      const glyph = charSets[set][idx];
-      cell.querySelectorAll('.cell-face').forEach(f => f.textContent = glyph);
-    }
-
-    if (sizeOn.checked) {
-      size = sizes[Math.floor(Math.random()*sizes.length)];
-      cell.querySelectorAll('.cell-face').forEach(f => f.style.fontSize = `${size}px`);
-    }
-
-    history.push({ cellIndex, cell, sound, color, shape, size });
-
-    if (history.length > n + 1) {
-      history.shift();
-    }
-
-    if (history.length > n) {
-      const a = history[history.length - 1 - n];
-      const b = history[history.length - 1];
-
-      if (directionalOn.checked && a.cellIndex === b.cellIndex) expected.add('position');
-
-      if (directionalOn.checked) {
-        const dx = b.cell.dataset.x - a.cell.dataset.x;
-        const dy = b.cell.dataset.y - a.cell.dataset.y;
-        const dz = b.cell.dataset.z - a.cell.dataset.z;
-        if (dx > 0) expected.add('east');
-        if (dx < 0) expected.add('west');
-        if (dy > 0) expected.add('south');
-        if (dy < 0) expected.add('north');
-        if (dz > 0) expected.add('above');
-        if (dz < 0) expected.add('below');
-      }
-
-      if (soundOn.checked && a.sound === b.sound) expected.add('sound');
-      if (colorOn.checked && a.color === b.color) expected.add('color');
-
-      if (shapeOn.checked && a.shape && b.shape &&
-          a.shape.set === b.shape.set && a.shape.idx === b.shape.idx) {
-        expected.add('shape');
-      }
-
-      if (shapeOn.checked && a.shape && b.shape && charGridLayout) {
-        const pa = charGridLayout[a.shape.set];
-        const pb = charGridLayout[b.shape.set];
-        if (pb.x > pa.x) expected.add('char-east');
-        if (pb.x < pa.x) expected.add('char-west');
-        if (pb.y > pa.y) expected.add('char-south');
-        if (pb.y < pa.y) expected.add('char-north');
-        if (b.shape.idx > a.shape.idx) expected.add('char-higher');
-        if (b.shape.idx < a.shape.idx) expected.add('char-lower');
-      }
-
-      if (sizeOn.checked && a.size === b.size) expected.add('size');
-    }
-
-    intervalCount++;
-    intervalCountEl.textContent = intervalCount;
+  } else {
+    expected.clear();
   }
+
+  const showFb = (feedbackMode.value === 'show' || feedbackMode.value === 'hideCounter');
+  if (showFb && (missed.length || wrong.length)) {
+    showFeedback(missed, wrong);
+  } else {
+    hideFeedback();
+  }
+
+  falseAlarms.clear();
+  currentIntervalResponses.clear();
+
+  if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
+    const currentN = Number(nValue.value);
+    checkAutoProgression();
+    stopGame(true, currentN);
+    return;
+  }
+
+  clearCells();
+
+  const cellIndex = Math.floor(Math.random()*cells.length);
+  const cell = cells[cellIndex];
+  cell.classList.add('active');
+
+  let sound = null;
+  let color = null;
+  let shape = null;
+  let size = null;
+
+  if (soundOn.checked) {
+    sound = sounds[Math.floor(Math.random()*sounds.length)];
+    playTone(sound);
+  }
+
+  if (colorOn.checked) {
+    color = colors[Math.floor(Math.random()*colors.length)];
+    cell.querySelectorAll('.cell-face').forEach(f => f.style.background = color);
+  }
+
+  if (shapeOn.checked) {
+    const setNames = Object.keys(charSets);
+    const set = setNames[Math.floor(Math.random()*setNames.length)];
+    const idx = Math.floor(Math.random()*charSets[set].length);
+    shape = { set, idx };
+    const glyph = charSets[set][idx];
+    cell.querySelectorAll('.cell-face').forEach(f => f.textContent = glyph);
+  }
+
+  if (sizeOn.checked) {
+    size = sizes[Math.floor(Math.random()*sizes.length)];
+    cell.querySelectorAll('.cell-face').forEach(f => f.style.fontSize = `${size}px`);
+  }
+
+  history.push({ cellIndex, cell, sound, color, shape, size });
+
+  if (history.length > n + 1) {
+    history.shift();
+  }
+
+  if (history.length > n) {
+    const a = history[history.length - 1 - n];
+    const b = history[history.length - 1];
+
+    if (directionalOn.checked && a.cellIndex === b.cellIndex) expected.add('position');
+
+    if (directionalOn.checked) {
+      const dx = b.cell.dataset.x - a.cell.dataset.x;
+      const dy = b.cell.dataset.y - a.cell.dataset.y;
+      const dz = b.cell.dataset.z - a.cell.dataset.z;
+      if (dx > 0) expected.add('east');
+      if (dx < 0) expected.add('west');
+      if (dy > 0) expected.add('south');
+      if (dy < 0) expected.add('north');
+      if (dz > 0) expected.add('above');
+      if (dz < 0) expected.add('below');
+    }
+
+    if (soundOn.checked && a.sound === b.sound) expected.add('sound');
+    if (colorOn.checked && a.color === b.color) expected.add('color');
+
+    if (shapeOn.checked && a.shape && b.shape &&
+        a.shape.set === b.shape.set && a.shape.idx === b.shape.idx) {
+      expected.add('shape');
+    }
+
+    if (shapeOn.checked && a.shape && b.shape && charGridLayout) {
+      const pa = charGridLayout[a.shape.set];
+      const pb = charGridLayout[b.shape.set];
+      if (pb.x > pa.x) expected.add('char-east');
+      if (pb.x < pa.x) expected.add('char-west');
+      if (pb.y > pa.y) expected.add('char-south');
+      if (pb.y < pa.y) expected.add('char-north');
+      if (b.shape.idx > a.shape.idx) expected.add('char-higher');
+      if (b.shape.idx < a.shape.idx) expected.add('char-lower');
+    }
+
+    if (sizeOn.checked && a.size === b.size) expected.add('size');
+  }
+
+  intervalCount++;
+  intervalCountEl.textContent = intervalCount;
+}
 
   function updateAccuracy() {
     accuracyEl.textContent = total > 0 ? `${Math.round((correct / total) * 100)}%` : '—';
   }
 
-  function respond(type) {
+function respond(type) {
     if (type === 'position' && !directionalOn.checked) return;
     if (['north', 'south', 'east', 'west', 'above', 'below'].includes(type) && !directionalOn.checked) return;
     if (type === 'sound' && !soundOn.checked) return;
@@ -2807,47 +2796,41 @@ function nextStimulus() {
     if (type === 'shape' && !shapeOn.checked) return;
     if (['char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'].includes(type) && !shapeOn.checked) return;
     if (type === 'size' && !sizeOn.checked) return;
-    if (currentIntervalResponses.has(type)) return;
+
+    if (type === 'north') currentIntervalResponses.delete('south');
+    if (type === 'south') currentIntervalResponses.delete('north');
+    if (type === 'east') currentIntervalResponses.delete('west');
+    if (type === 'west') currentIntervalResponses.delete('east');
+    if (type === 'above') currentIntervalResponses.delete('below');
+    if (type === 'below') currentIntervalResponses.delete('above');
 
     const directions = ['north', 'south', 'east', 'west', 'above', 'below'];
     if (type === 'position') {
-      const hasDirection = directions.some(d => currentIntervalResponses.has(d));
-      if (hasDirection) return;
+      directions.forEach(d => currentIntervalResponses.delete(d));
     }
     if (directions.includes(type)) {
-      if (currentIntervalResponses.has('position')) return;
+      currentIntervalResponses.delete('position');
     }
+
+    if (type === 'char-north') currentIntervalResponses.delete('char-south');
+    if (type === 'char-south') currentIntervalResponses.delete('char-north');
+    if (type === 'char-east') currentIntervalResponses.delete('char-west');
+    if (type === 'char-west') currentIntervalResponses.delete('char-east');
+    if (type === 'char-higher') currentIntervalResponses.delete('char-lower');
+    if (type === 'char-lower') currentIntervalResponses.delete('char-higher');
 
     const charRelations = ['char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'];
     if (type === 'shape') {
-      const hasCharRelation = charRelations.some(c => currentIntervalResponses.has(c));
-      if (hasCharRelation) return;
+      charRelations.forEach(r => currentIntervalResponses.delete(r));
     }
     if (charRelations.includes(type)) {
-      if (currentIntervalResponses.has('shape')) return;
+      currentIntervalResponses.delete('shape');
     }
 
-    const opp = opposites[type];
-    if (opp && currentIntervalResponses.has(opp)) {
-      return; 
-    }
-
-    currentIntervalResponses.add(type);
-
-    const n = +nValue.value;
-    if (history.length > n) {
-      const mod = getModalityOfFeature(type);
-      total++;
-      if (mod) modalityStats[mod].total++;
-      
-      if (expected.has(type)) {
-        correct++;
-        if (mod) modalityStats[mod].correct++;
-        expected.delete(type);
-      } else {
-        falseAlarms.add(type);
-      }
-      updateAccuracy();
+    if (currentIntervalResponses.has(type)) {
+      currentIntervalResponses.delete(type);
+    } else {
+      currentIntervalResponses.add(type);
     }
   }
 
