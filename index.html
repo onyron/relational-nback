@@ -2671,13 +2671,6 @@ function applySoftTorqueImpulse() {
 function nextStimulus() {
     const maxTrials = +numTrials.value;
 
-    if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
-      const currentN = Number(nValue.value);
-      checkAutoProgression();
-      stopGame(true, currentN);
-      return;
-    }
-
     applySoftTorqueImpulse();
 
     currentIntervalResponses.clear();
@@ -2709,6 +2702,14 @@ function nextStimulus() {
     }
 
     falseAlarms.clear();
+
+    if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
+      const currentN = Number(nValue.value);
+      checkAutoProgression();
+      stopGame(true, currentN);
+      return;
+    }
+
     clearCells();
 
     const cellIndex = Math.floor(Math.random()*cells.length);
@@ -2788,8 +2789,7 @@ function nextStimulus() {
       }
 
       if (sizeOn.checked && a.size === b.size) expected.add('size');
-
-      }
+    }
 
     intervalCount++;
     intervalCountEl.textContent = intervalCount;
