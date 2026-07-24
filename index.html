@@ -3423,9 +3423,24 @@ if (acc >= winThresh) {
     setTimeout(() => btn.classList.remove('key-active'), 120);
   }
 
+  function normalizeKey(e) {
+    if (e.code && e.code.startsWith('Key')) {
+      return e.code.slice(3).toLowerCase();
+    }
+    if (e.code && (e.code.startsWith('Digit') || e.code.startsWith('Numpad'))) {
+      const num = e.code.replace(/^(Digit|Numpad)/, '');
+      if (/^\d$/.test(num)) return num;
+    }
+    if (e.code === 'Space') {
+      return ' ';
+    }
+    return e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  }
+
   document.addEventListener('keydown', e => {
     if (e.repeat) return; 
-    // Keybind capture mode
+    const key = normalizeKey(e);
+
     if (listeningAction) {
       if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
       e.preventDefault();
@@ -3435,10 +3450,8 @@ if (acc >= winThresh) {
         listeningAction = null;
         return;
       }
-      let newKey = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      if (e.code === 'Numpad5') newKey = '5';
-      bindings[listeningAction] = newKey;
-      kbButtons[listeningAction].textContent = keyDisplayName(newKey);
+      bindings[listeningAction] = key;
+      kbButtons[listeningAction].textContent = keyDisplayName(key);
       kbButtons[listeningAction].classList.remove('listening');
       listeningAction = null;
       rebuildKeyMap();
@@ -3451,10 +3464,6 @@ if (acc >= winThresh) {
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
 
-    let key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    if (e.code === 'Numpad5' || key === 'clear') {
-      key = '5';
-    }
     const mapping = keyMap[key];
     if (!mapping) return;
 
