@@ -2332,6 +2332,7 @@
   };
 
   let currentRotationMatrix = new DOMMatrix();
+  const tempIncrementalMatrix = new DOMMatrix();
 
   const rotationRuntime = {
     rafId: null
@@ -2416,15 +2417,19 @@ function computeSmartRotation(now) {
 
   let angle = baseRotationSpeedDegSec * dt;
 
-  let incrementalRotation = new DOMMatrix();
-  incrementalRotation.rotateAxisAngleSelf(
+  tempIncrementalMatrix.m11 = 1; tempIncrementalMatrix.m12 = 0; tempIncrementalMatrix.m13 = 0; tempIncrementalMatrix.m14 = 0;
+  tempIncrementalMatrix.m21 = 0; tempIncrementalMatrix.m22 = 1; tempIncrementalMatrix.m23 = 0; tempIncrementalMatrix.m24 = 0;
+  tempIncrementalMatrix.m31 = 0; tempIncrementalMatrix.m32 = 0; tempIncrementalMatrix.m33 = 1; tempIncrementalMatrix.m34 = 0;
+  tempIncrementalMatrix.m41 = 0; tempIncrementalMatrix.m42 = 0; tempIncrementalMatrix.m43 = 0; tempIncrementalMatrix.m44 = 1;
+
+  tempIncrementalMatrix.rotateAxisAngleSelf(
     rotationState.currentAxis[0],
     rotationState.currentAxis[1],
     rotationState.currentAxis[2],
     angle
   );
 
-  currentRotationMatrix.preMultiplySelf(incrementalRotation);
+  currentRotationMatrix.preMultiplySelf(tempIncrementalMatrix);
 
   if (rotationState.frameCount === undefined) {
     rotationState.frameCount = 0;
@@ -2597,7 +2602,6 @@ function computeSmartRotation(now) {
     const size = getTargetCubeSize();
     const cellSize = size / n;
     const offset = (n - 1) / 2;
-    // shift so the cube's visual center aligns with the grid-cube's center
     const shift = size / 2 - cellSize / 2;
 
     for (let x = 0; x < n; x++)
@@ -2608,6 +2612,8 @@ function computeSmartRotation(now) {
           cell.style.width = cell.style.height = `${cellSize}px`;
           cell.style.transform = `translate3d(${(x-offset)*cellSize + shift}px, ${(y-offset)*cellSize + shift}px, ${(z-offset)*cellSize}px)`;
           cell.dataset.x = x; cell.dataset.y = y; cell.dataset.z = z;
+          cell.cx = x; cell.cy = y; cell.cz = z;
+          cell.faces = [];
           createFaces(cell, cellSize);
           gridCube.appendChild(cell);
           cells.push(cell);
@@ -2624,6 +2630,7 @@ function computeSmartRotation(now) {
       f.className = 'cell-face';
       f.style.transform = `${r} translateZ(${size/2}px)`;
       cell.appendChild(f);
+      cell.faces.push(f);
     });
   }
 
@@ -2650,14 +2657,16 @@ function computeSmartRotation(now) {
   }
 
   function clearCells() {
-    cells.forEach(c => {
+    for (let i = 0; i < cells.length; i++) {
+      const c = cells[i];
       c.classList.remove('active');
-      c.querySelectorAll('.cell-face').forEach(f => {
+      for (let j = 0; j < c.faces.length; j++) {
+        const f = c.faces[j];
         f.style.background = '';
         f.textContent = '';
         f.style.fontSize = '';
-      });
-    });
+      }
+    }
   }
 
   function generateCharGrid() {
@@ -2762,7 +2771,7 @@ function nextStimulus() {
 
   if (colorOn.checked) {
     color = colors[Math.floor(Math.random()*colors.length)];
-    cell.querySelectorAll('.cell-face').forEach(f => f.style.background = color);
+    for (let i = 0; i < cell.faces.length; i++) cell.faces[i].style.background = color;
   }
 
   if (shapeOn.checked) {
@@ -2771,12 +2780,12 @@ function nextStimulus() {
     const idx = Math.floor(Math.random()*charSets[set].length);
     shape = { set, idx };
     const glyph = charSets[set][idx];
-    cell.querySelectorAll('.cell-face').forEach(f => f.textContent = glyph);
+    for (let i = 0; i < cell.faces.length; i++) cell.faces[i].textContent = glyph;
   }
 
   if (sizeOn.checked) {
     size = sizes[Math.floor(Math.random()*sizes.length)];
-    cell.querySelectorAll('.cell-face').forEach(f => f.style.fontSize = `${size}px`);
+    for (let i = 0; i < cell.faces.length; i++) cell.faces[i].style.fontSize = `${size}px`;
   }
 
   history.push({ cellIndex, cell, sound, color, shape, size });
@@ -2792,9 +2801,9 @@ function nextStimulus() {
     if (directionalOn.checked && a.cellIndex === b.cellIndex) expected.add('position');
 
     if (directionalOn.checked) {
-      const dx = b.cell.dataset.x - a.cell.dataset.x;
-      const dy = b.cell.dataset.y - a.cell.dataset.y;
-      const dz = b.cell.dataset.z - a.cell.dataset.z;
+      const dx = b.cell.cx - a.cell.cx;
+      const dy = b.cell.cy - a.cell.cy;
+      const dz = b.cell.cz - a.cell.cz;
       if (dx > 0) expected.add('east');
       if (dx < 0) expected.add('west');
       if (dy > 0) expected.add('south');
@@ -2833,13 +2842,16 @@ function nextStimulus() {
     accuracyEl.textContent = total > 0 ? `${Math.round((correct / total) * 100)}%` : '—';
   }
 
-function respond(type) {
+const DIR_TYPES = ['north', 'south', 'east', 'west', 'above', 'below'];
+  const CHAR_REL_TYPES = ['char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'];
+
+  function respond(type) {
     if (type === 'position' && !directionalOn.checked) return;
-    if (['north', 'south', 'east', 'west', 'above', 'below'].includes(type) && !directionalOn.checked) return;
+    if (DIR_TYPES.includes(type) && !directionalOn.checked) return;
     if (type === 'sound' && !soundOn.checked) return;
     if (type === 'color' && !colorOn.checked) return;
     if (type === 'shape' && !shapeOn.checked) return;
-    if (['char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'].includes(type) && !shapeOn.checked) return;
+    if (CHAR_REL_TYPES.includes(type) && !shapeOn.checked) return;
     if (type === 'size' && !sizeOn.checked) return;
 
     if (type === 'north') currentIntervalResponses.delete('south');
@@ -2849,11 +2861,10 @@ function respond(type) {
     if (type === 'above') currentIntervalResponses.delete('below');
     if (type === 'below') currentIntervalResponses.delete('above');
 
-    const directions = ['north', 'south', 'east', 'west', 'above', 'below'];
     if (type === 'position') {
-      directions.forEach(d => currentIntervalResponses.delete(d));
+      for (let i = 0; i < DIR_TYPES.length; i++) currentIntervalResponses.delete(DIR_TYPES[i]);
     }
-    if (directions.includes(type)) {
+    if (DIR_TYPES.includes(type)) {
       currentIntervalResponses.delete('position');
     }
 
@@ -2864,11 +2875,10 @@ function respond(type) {
     if (type === 'char-higher') currentIntervalResponses.delete('char-lower');
     if (type === 'char-lower') currentIntervalResponses.delete('char-higher');
 
-    const charRelations = ['char-north', 'char-south', 'char-east', 'char-west', 'char-higher', 'char-lower'];
     if (type === 'shape') {
-      charRelations.forEach(r => currentIntervalResponses.delete(r));
+      for (let i = 0; i < CHAR_REL_TYPES.length; i++) currentIntervalResponses.delete(CHAR_REL_TYPES[i]);
     }
-    if (charRelations.includes(type)) {
+    if (CHAR_REL_TYPES.includes(type)) {
       currentIntervalResponses.delete('shape');
     }
 
@@ -3423,13 +3433,16 @@ if (acc >= winThresh) {
     setTimeout(() => btn.classList.remove('key-active'), 120);
   }
 
+  const RE_DIGIT_NUMPAD = /^(Digit|Numpad)/;
+  const RE_SINGLE_DIGIT = /^\d$/;
+
   function normalizeKey(e) {
     if (e.code && e.code.startsWith('Key')) {
       return e.code.slice(3).toLowerCase();
     }
     if (e.code && (e.code.startsWith('Digit') || e.code.startsWith('Numpad'))) {
-      const num = e.code.replace(/^(Digit|Numpad)/, '');
-      if (/^\d$/.test(num)) return num;
+      const num = e.code.replace(RE_DIGIT_NUMPAD, '');
+      if (RE_SINGLE_DIGIT.test(num)) return num;
     }
     if (e.code === 'Space') {
       return ' ';
