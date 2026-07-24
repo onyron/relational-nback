@@ -610,8 +610,11 @@
     .compass .c-w { grid-column: 1; grid-row: 2; }
     .compass .c-s { grid-column: 2; grid-row: 3; }
     .compass .c-e { grid-column: 3; grid-row: 2; }
-    .compass .c-up { grid-column: 1; grid-row: 1; }
+    .compass .c-up { grid-column: 3; grid-row: 1; }
     .compass .c-dn { grid-column: 3; grid-row: 3; }
+    .panel.chr .c-dn { grid-column: 1; grid-row: 1; }
+    .panel.chr .c-up { grid-column: 3; grid-row: 1; }
+    .panel.chr .c-dn { grid-column: 1; grid-row: 1; }
     .compass .c-mid {
       grid-column: 2; grid-row: 2;
     }
@@ -3254,15 +3257,15 @@ if (acc >= winThresh) {
     'sound': 'z',
     'color': 'x',
     'size': 'c',
-    'shape': 'f',
+    'shape': ' ',
     'north': 'ArrowUp', 'south': 'ArrowDown', 'west': 'ArrowLeft',
     'east': 'ArrowRight', 'above': 'PageUp', 'below': 'PageDown',
     'char-north': 'w',
     'char-south': 's',
     'char-west': 'a',
     'char-east': 'd',
-    'char-higher': 'q',
-    'char-lower': 'e',
+    'char-higher': 'e',
+    'char-lower': 'q',
   };
 
   const actionElements = {
@@ -3345,7 +3348,7 @@ if (acc >= winThresh) {
     if (q('.panel.chr .panel-hotkey')) {
       q('.panel.chr .panel-hotkey').textContent =
         keyDisplayName(bindings.shape) + ' · ' +
-        ['char-west', 'char-north', 'char-south', 'char-east', 'char-higher', 'char-lower']
+        ['char-west', 'char-north', 'char-south', 'char-east', 'char-lower', 'char-higher']
           .map(a => keyDisplayName(bindings[a])).join(' ');
     }
     if (q('.panel.siz .panel-hotkey')) q('.panel.siz .panel-hotkey').textContent = keyDisplayName(bindings.size);
