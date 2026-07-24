@@ -243,6 +243,15 @@
       will-change: transform;
     }
 
+    .cube-wrapper.classic-spin {
+      animation: spin var(--spin-speed, 18s) linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotateX(-30deg) rotateY(0deg); }
+      to   { transform: rotateX(330deg) rotateY(360deg); }
+    }
+
     .grid-cube {
       position: relative;
       width: 100%;
@@ -1876,6 +1885,13 @@
       <input type="number" id="cubeSize" value="240" min="80" max="800" step="10" />
     </div>
     <div class="setting-group">
+      <label>Rotation Mode</label>
+      <select id="rotationMode">
+        <option value="smart" selected>Dynamic</option>
+        <option value="classic">Classic</option>
+      </select>
+    </div>
+    <div class="setting-group">
       <label>Rotation (seconds)</label>
       <input type="number" id="rotationSpeed" value="13" min="1" />
     </div>
@@ -1900,7 +1916,7 @@
       <input type="number" id="nValue" value="2" min="1" />
     </div>
     <div class="setting-group">
-      <label>Num Trials</label>
+      <label>Trials</label>
       <input type="number" id="numTrials" value="35" min="10" />
     </div>
     <label class="toggle-row">
@@ -2120,6 +2136,7 @@
   const cubeDimension = document.getElementById('cubeDimension');
   const cubeSize = document.getElementById('cubeSize');
   const rotationSpeed = document.getElementById('rotationSpeed');
+  const rotationMode = document.getElementById('rotationMode'); 
   const intervalMs = document.getElementById('intervalMs');
   const isiMs = document.getElementById('isiMs');
   const nValue = document.getElementById('nValue');
@@ -2454,6 +2471,19 @@ function computeSmartRotation(now) {
     rotationRuntime.rafId = requestAnimationFrame(animateSmartRotation);
   }
 
+  function applyRotationMode() {
+    const mode = rotationMode ? rotationMode.value : 'smart';
+    if (mode === 'classic') {
+      stopSmartRotation();
+      cubeWrapper.style.transform = '';
+      cubeWrapper.style.setProperty('--spin-speed', `${rotationSpeed.value}s`);
+      cubeWrapper.classList.add('classic-spin');
+    } else {
+      cubeWrapper.classList.remove('classic-spin');
+      startSmartRotation();
+    }
+  }
+
   function startSmartRotation() {
     if (rotationRuntime.rafId) return;
     rotationState.lastTime = performance.now();
@@ -2502,8 +2532,16 @@ function computeSmartRotation(now) {
   cubeSize.onchange = applyCubeSize;
   rotationSpeed.oninput = () => {
     updateRotationTempoCache();
+    cubeWrapper.style.setProperty('--spin-speed', `${rotationSpeed.value}s`);
     saveSettings();
   };
+
+  if (rotationMode) {
+    rotationMode.onchange = () => {
+      applyRotationMode();
+      saveSettings();
+    };
+  }
 
   function renderCharReference() {
     charReferenceGrid.innerHTML = '';
@@ -2985,6 +3023,7 @@ function respond(type) {
     { el: cubeDimension,       key: 'cubeDimension',       prop: 'value' },
     { el: cubeSize,            key: 'cubeSize',            prop: 'value' },
     { el: rotationSpeed,       key: 'rotationSpeed',       prop: 'value' },
+    { el: rotationMode,        key: 'rotationMode',        prop: 'value' },
     { el: intervalMs,          key: 'intervalMs',          prop: 'value' },
     { el: isiMs,               key: 'isiMs',               prop: 'value' },
     { el: nValue,              key: 'nValue',              prop: 'value' },
@@ -3197,7 +3236,7 @@ if (acc >= winThresh) {
   updateRotationTempoCache();
   loadMinutesToday();
   setRandomRotation();
-  startSmartRotation();
+  applyRotationMode();
   document.documentElement.style.setProperty('--user-cube-size', `${cubeSize.value}px`);
   buildCube(+cubeDimension.value || 3);
   updateResponseConsoleVisibility();
