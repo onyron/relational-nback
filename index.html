@@ -3437,6 +3437,9 @@ if (acc >= winThresh) {
   const RE_SINGLE_DIGIT = /^\d$/;
 
   function normalizeKey(e) {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown'].includes(e.key)) {
+      return e.key;
+    }
     if (e.code && e.code.startsWith('Key')) {
       return e.code.slice(3).toLowerCase();
     }
