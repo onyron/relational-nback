@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Relational N-Back</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="N-Back" />
@@ -1657,6 +1657,633 @@
       opacity: 1;
       transform: translateY(-4px);
     }
+
+    :root {
+      --app-height: 100dvh;
+      --runtime-cube-size: var(--user-cube-size);
+      --cube-size: var(--runtime-cube-size);
+    }
+
+    html,
+    body {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overscroll-behavior: none;
+    }
+
+    body {
+      min-height: var(--app-height);
+      overflow-x: clip;
+    }
+
+    .app {
+      min-height: var(--app-height);
+    }
+
+    .main,
+    .stage,
+    .stage-frame,
+    .scene,
+    .dock-wrap,
+    .dock,
+    .topbar,
+    .stats {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    button,
+    select,
+    input {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (max-width: 900px) {
+      html,
+      body {
+        height: var(--app-height);
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      body {
+        position: fixed;
+        inset: 0;
+        touch-action: manipulation;
+      }
+
+      .app {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        overflow: hidden;
+      }
+
+      .topbar {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        min-height: calc(44px + env(safe-area-inset-top));
+        padding: max(5px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 5px max(8px, env(safe-area-inset-left));
+        gap: 6px;
+        background: linear-gradient(180deg, rgba(10, 14, 24, 0.96), rgba(10, 14, 24, 0.74));
+        border-bottom: 1px solid var(--border-subtle);
+        backdrop-filter: blur(12px);
+      }
+
+      .topbar-left {
+        gap: 4px !important;
+        flex: 0 0 auto;
+      }
+
+      #fullscreenBtn {
+        display: none !important;
+      }
+
+      .icon-btn {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        border-radius: 9px;
+        font-size: 15px;
+      }
+
+      .stats {
+        flex: 1 1 auto;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 3px;
+        overflow: hidden;
+      }
+
+      body.game-active .stat-card {
+        display: flex !important;
+      }
+
+      body.game-active #trialCard {
+        display: none !important;
+      }
+
+      .stat-card {
+        min-width: 42px;
+        height: 34px;
+        padding: 0 4px;
+        gap: 0;
+        justify-content: center;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .stat-card > div:last-child {
+        min-width: 0;
+        text-align: center;
+      }
+
+      .stat-icon {
+        display: none !important;
+      }
+
+      .stat-label {
+        margin: 0 0 2px;
+        font-size: 7px;
+        line-height: 1;
+        letter-spacing: 0.55px;
+      }
+
+      .stat-value {
+        font-size: 11px;
+        line-height: 1;
+      }
+
+      .primary-actions {
+        flex: 0 0 auto;
+      }
+
+      .primary-actions .btn {
+        height: 34px;
+        min-width: 58px;
+        padding: 0 10px;
+        border-radius: 9px;
+        font-size: 10.5px;
+        letter-spacing: 0.45px;
+        white-space: nowrap;
+      }
+
+      .main {
+        min-height: 0;
+        padding: 0;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .stage {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .stage-frame {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        padding: 18px 38px;
+        display: grid;
+        place-items: center;
+      }
+
+      .scene {
+        perspective: 720px;
+        flex: 0 0 auto;
+      }
+
+      .axis-x,
+      .axis-z {
+        width: calc(var(--cube-size) + 56px);
+        margin-left: calc((var(--cube-size) + 56px) / -2);
+      }
+
+      .axis-y {
+        height: calc(var(--cube-size) + 56px);
+        margin-top: calc((var(--cube-size) + 56px) / -2);
+      }
+
+      .axis-label {
+        min-width: 30px;
+        padding: 4px 6px;
+        font-size: 12px;
+        letter-spacing: 0.7px;
+        text-align: center;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+      }
+
+      .label-east  { transform: translate3d(calc(var(--cube-size) / 2 + 20px), 0, 0) translate(-50%, -50%); }
+      .label-west  { transform: translate3d(calc(var(--cube-size) / -2 - 20px), 0, 0) translate(-50%, -50%); }
+      .label-south { transform: translate3d(0, calc(var(--cube-size) / 2 + 20px), 0) translate(-50%, -50%); }
+      .label-north { transform: translate3d(0, calc(var(--cube-size) / -2 - 20px), 0) translate(-50%, -50%); }
+      .label-above { transform: translate3d(0, 0, calc(var(--cube-size) / 2 + 20px)) translate(-50%, -50%); }
+      .label-below { transform: translate3d(0, 0, calc(var(--cube-size) / -2 - 20px)) translate(-50%, -50%); }
+
+      .cell-face {
+        background: rgba(120, 140, 255, 0.025);
+        border-color: rgba(180, 210, 255, 0.13);
+        font-size: var(--cell-font-size, 38px);
+        font-weight: 800;
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 9px rgba(255, 255, 255, 0.25);
+      }
+
+      .cell.active .cell-face {
+        background: rgba(110, 231, 255, 0.78);
+        border-color: rgba(225, 250, 255, 0.72);
+        box-shadow: 0 0 15px rgba(110, 231, 255, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.42);
+      }
+
+      .dock-wrap {
+        flex: 0 0 auto;
+        width: 100%;
+        padding: 5px max(8px, env(safe-area-inset-right)) max(7px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+        background: linear-gradient(180deg, rgba(5, 7, 12, 0.4), rgba(5, 7, 12, 0.96));
+        border-top: 1px solid var(--border-subtle);
+        overflow: hidden;
+      }
+
+      .dock-title {
+        display: none;
+      }
+
+      .dock {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 6px;
+        align-items: stretch;
+        justify-content: stretch;
+      }
+
+      .panel {
+        width: auto;
+        max-width: none !important;
+        min-width: 0;
+        padding: 7px;
+        border-radius: 11px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.38);
+      }
+
+      .panel.dir {
+        order: 1;
+      }
+
+      .panel.chr {
+        order: 2;
+      }
+
+      .panel.snd,
+      .panel.col,
+      .panel.siz {
+        order: 3;
+      }
+
+      .panel.dir,
+      .panel.chr {
+        grid-column: span 6;
+      }
+
+      .panel.snd,
+      .panel.col,
+      .panel.siz {
+        grid-column: span 3;
+      }
+
+      .dock[data-simple-count="1"] .panel.snd,
+      .dock[data-simple-count="1"] .panel.col,
+      .dock[data-simple-count="1"] .panel.siz {
+        grid-column: span 6;
+      }
+
+      .dock[data-simple-count="3"] .panel.snd,
+      .dock[data-simple-count="3"] .panel.col,
+      .dock[data-simple-count="3"] .panel.siz {
+        grid-column: span 2;
+      }
+
+      .panel-header {
+        min-height: 14px;
+        margin-bottom: 5px;
+      }
+
+      .panel-title {
+        gap: 6px;
+        font-size: 9px;
+        letter-spacing: 1.05px;
+      }
+
+      .panel-title .bullet {
+        width: 6px;
+        height: 6px;
+      }
+
+      .panel-hotkey {
+        display: none !important;
+      }
+
+      .panel.snd .panel-header,
+      .panel.col .panel-header,
+      .panel.siz .panel-header {
+        display: none;
+      }
+
+      .compass {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-rows: repeat(2, 44px);
+        gap: 5px;
+      }
+
+      .compass .c-up {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      .compass .c-n {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      .compass .c-dn,
+      .panel.chr .c-dn {
+        grid-column: 3;
+        grid-row: 1;
+      }
+
+      .compass .c-w {
+        grid-column: 1;
+        grid-row: 2;
+      }
+
+      .compass .c-s {
+        grid-column: 2;
+        grid-row: 2;
+      }
+
+      .compass .c-e {
+        grid-column: 3;
+        grid-row: 2;
+      }
+
+      .compass .c-mid {
+        grid-column: 4;
+        grid-row: 1 / 3;
+      }
+
+      .response-btn {
+        min-width: 0;
+        min-height: 44px;
+        padding: 4px 3px;
+        gap: 2px;
+        border-radius: 8px;
+        font-size: 12px;
+        touch-action: manipulation;
+        user-select: none;
+      }
+
+      .response-btn:hover {
+        transform: none;
+      }
+
+      .response-btn .ico {
+        font-size: 18px;
+      }
+
+      .response-btn .lbl {
+        font-size: 8px;
+        letter-spacing: 0.55px;
+      }
+
+      .response-btn.big {
+        min-height: 54px;
+        padding: 6px 8px;
+        flex-direction: row;
+        gap: 8px;
+        font-size: 10px;
+        line-height: 1.15;
+        text-align: left;
+      }
+
+      .response-btn.big .ico {
+        flex: 0 0 auto;
+        font-size: 22px;
+      }
+
+      #positionBtn .ico,
+      #shapeBtn .ico {
+        font-size: 22px;
+      }
+
+      .feedback-toast {
+        top: calc(50px + env(safe-area-inset-top));
+        left: 50%;
+        width: calc(100vw - 24px);
+        min-width: 0;
+        max-width: 420px;
+        transform: translateX(-50%);
+      }
+
+      .settings {
+        width: min(380px, 100vw);
+        height: var(--app-height);
+        padding: calc(16px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      }
+
+      .pregame-overlay {
+        padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
+      }
+
+      .pregame-modal {
+        width: min(320px, 100%);
+        max-height: 100%;
+        overflow: auto;
+      }
+
+      .stats-modal {
+        width: calc(100vw - 12px);
+        height: calc(var(--app-height) - 12px);
+        border-radius: 16px;
+      }
+
+      .stats-modal-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 14px 14px 10px;
+      }
+
+      .stats-modal-title h2 {
+        font-size: 18px;
+      }
+
+      .stats-modal-title p {
+        font-size: 10px;
+      }
+
+      .stats-modal-controls {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .stats-modal-controls > div {
+        margin-right: 0 !important;
+      }
+
+      .stats-tab {
+        flex: 1 1 auto;
+        padding: 8px 10px;
+        font-size: 11px;
+      }
+
+      .stats-tab-group {
+        padding: 0 14px 10px;
+      }
+
+      .stats-modal-content {
+        padding: 0 14px 14px;
+      }
+
+      .stats-summary-card {
+        min-height: 96px;
+        padding: 14px;
+      }
+
+      .stats-summary-value {
+        font-size: 28px;
+      }
+
+      body.console-hidden .main {
+        padding: 0;
+      }
+    }
+
+    @media (max-width: 640px) and (max-height: 640px) {
+      .topbar {
+        min-height: calc(42px + env(safe-area-inset-top));
+        padding-bottom: 3px;
+      }
+
+      .stage-frame {
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+
+      .panel {
+        padding: 5px;
+      }
+
+      .panel-header {
+        margin-bottom: 3px;
+      }
+
+      .compass {
+        grid-template-rows: repeat(2, 38px);
+        gap: 4px;
+      }
+
+      .response-btn {
+        min-height: 38px;
+      }
+
+      .response-btn.big {
+        min-height: 48px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .stats > .stat-card:nth-child(4) {
+        display: none !important;
+      }
+
+      .stat-card {
+        min-width: 38px;
+      }
+
+      .primary-actions .btn {
+        min-width: 52px;
+        padding: 0 8px;
+      }
+
+      .stage-frame {
+        padding-left: 34px;
+        padding-right: 34px;
+      }
+
+      .response-btn .lbl {
+        font-size: 7.5px;
+      }
+    }
+
+    @media (max-width: 900px) and (orientation: landscape) and (max-height: 560px) {
+      .app {
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 46vw);
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+
+      .topbar {
+        grid-column: 1 / -1;
+        grid-row: 1;
+      }
+
+      .main {
+        grid-column: 1;
+        grid-row: 2;
+      }
+
+      .dock-wrap {
+        grid-column: 2;
+        grid-row: 2;
+        height: 100%;
+        padding: 6px max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) 6px;
+        border-top: 0;
+        border-left: 1px solid var(--border-subtle);
+        display: flex;
+        align-items: center;
+      }
+
+      .dock {
+        width: 100%;
+        align-content: center;
+        gap: 5px;
+      }
+
+      .panel {
+        padding: 4px;
+      }
+
+      .panel.dir .panel-header,
+      .panel.chr .panel-header {
+        display: none;
+      }
+
+      .compass {
+        grid-template-rows: repeat(2, 34px);
+        gap: 3px;
+      }
+
+      .response-btn {
+        min-height: 34px;
+        padding: 2px;
+      }
+
+      .response-btn .ico {
+        font-size: 16px;
+      }
+
+      .response-btn .lbl {
+        font-size: 6.5px;
+        letter-spacing: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .response-btn.big {
+        min-height: 42px;
+        padding: 4px 6px;
+        font-size: 9px;
+      }
+
+      .response-btn.big .ico {
+        font-size: 18px;
+      }
+
+      .stage-frame {
+        padding: 14px 32px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -2465,9 +3092,10 @@ function computeSmartRotation(now) {
 
   function animateSmartRotation(now) {
     computeSmartRotation(now);
-    const zDrift = Math.sin(now * 0.0007) * 35;
-    const yDrift = Math.cos(now * 0.0005) * 15;
-    const xDrift = Math.sin(now * 0.0004) * 15;
+    const mobile = isMobileLayout();
+    const zDrift = Math.sin(now * 0.0007) * (mobile ? 12 : 35);
+    const yDrift = Math.cos(now * 0.0005) * (mobile ? 6 : 15);
+    const xDrift = Math.sin(now * 0.0004) * (mobile ? 6 : 15);
     cubeWrapper.style.transform = `translate3d(${xDrift}px, ${yDrift}px, ${zDrift}px) ` + currentRotationMatrix.toString();
     rotationRuntime.rafId = requestAnimationFrame(animateSmartRotation);
   }
@@ -2563,28 +3191,94 @@ function computeSmartRotation(now) {
 
   function updateTrialCardVisibility() {
     if (!trialCard) return;
-    if (feedbackMode.value === 'show') {
-      trialCard.style.setProperty('display', 'flex', 'important');
-    } else {
-      trialCard.style.setProperty('display', 'none', 'important');
-    }
+    trialCard.style.display = feedbackMode.value === 'show' ? 'flex' : 'none';
   }
   feedbackMode.addEventListener('change', updateTrialCardVisibility);
 
   function showPregameOverlay() { pregameOverlay.classList.add('visible'); }
   function hidePregameOverlay() { pregameOverlay.classList.remove('visible'); }
 
+  let lastBuiltCubeSize = 0;
+  let pendingCubeResize = false;
+  let viewportSyncFrame = 0;
+
+  function getViewportMetrics() {
+    const viewport = window.visualViewport;
+    const layoutWidth = document.documentElement.clientWidth || window.innerWidth;
+    const layoutHeight = window.innerHeight || document.documentElement.clientHeight;
+    const width = Math.round(Math.min(viewport?.width || layoutWidth, layoutWidth));
+    const height = Math.round(Math.min(viewport?.height || layoutHeight, layoutHeight));
+    return { width, height };
+  }
+
+  function isMobileLayout() {
+    return window.matchMedia('(max-width: 900px)').matches;
+  }
+
+  function isCompactLandscape() {
+    const { width, height } = getViewportMetrics();
+    return isMobileLayout() && width > height && height <= 560;
+  }
+
+  function getEstimatedDockHeight(width, height) {
+    if (hideResponseConsole.checked) return 0;
+    const controllerCount = Number(directionalOn.checked) + Number(shapeOn.checked);
+    const simpleCount = Number(soundOn.checked) + Number(colorOn.checked) + Number(sizeOn.checked);
+    const compact = height <= 640;
+    const controllerHeight = compact ? 107 : 126;
+    const simpleHeight = compact ? 58 : 68;
+    const simpleRows = simpleCount > 0 ? 1 : 0;
+    const gaps = Math.max(0, controllerCount + simpleRows - 1) * 6;
+    return controllerCount * controllerHeight + simpleRows * simpleHeight + gaps + 12;
+  }
+
   function getTargetCubeSize() {
     let configSize = parseInt(cubeSize.value, 10);
     if (!Number.isFinite(configSize) || configSize < 80) configSize = 240;
     if (configSize > 800) configSize = 800;
+    if (!isMobileLayout()) return configSize;
 
-    if (window.innerWidth <= 380) {
-      return Math.min(configSize, 170);
-    } else if (window.innerWidth <= 600) {
-      return Math.min(configSize, 200);
+    const { width, height } = getViewportMetrics();
+    let widthLimit;
+    let heightLimit;
+
+    if (isCompactLandscape()) {
+      const dockWidth = Math.min(Math.max(300, width * 0.46), width * 0.52);
+      widthLimit = width - dockWidth - 68;
+      heightLimit = height - 76;
+    } else {
+      const dockHeight = getEstimatedDockHeight(width, height);
+      widthLimit = width - (width <= 360 ? 70 : 82);
+      heightLimit = (height - dockHeight - 76) * 0.74;
     }
-    return configSize;
+
+    return Math.max(96, Math.floor(Math.min(configSize, 230, widthLimit, heightLimit)));
+  }
+
+  function syncViewportMetrics(forceCube = false) {
+    const activeEl = document.activeElement;
+    const isInputFocused = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT' || activeEl.tagName === 'TEXTAREA');
+
+    if (!isInputFocused) {
+      const { height } = getViewportMetrics();
+      document.documentElement.style.setProperty('--app-height', `${height}px`);
+    }
+
+    if (!forceCube && gameActive) {
+      pendingCubeResize = true;
+      return;
+    }
+
+    const nextSize = getTargetCubeSize();
+    if (forceCube || Math.abs(nextSize - lastBuiltCubeSize) >= 2) {
+      buildCube(+cubeDimension.value || 3);
+    }
+    pendingCubeResize = false;
+  }
+
+  function scheduleViewportSync(forceCube = false) {
+    cancelAnimationFrame(viewportSyncFrame);
+    viewportSyncFrame = requestAnimationFrame(() => syncViewportMetrics(forceCube));
   }
 
   function buildCube(n) {
@@ -2592,6 +3286,8 @@ function computeSmartRotation(now) {
     cells = [];
     
     const size = getTargetCubeSize();
+    lastBuiltCubeSize = size;
+    document.documentElement.style.setProperty('--runtime-cube-size', `${size}px`);
     const cellSize = size / n;
     const offset = (n - 1) / 2;
     const shift = size / 2 - cellSize / 2;
@@ -2602,6 +3298,8 @@ function computeSmartRotation(now) {
           const cell = document.createElement('div');
           cell.className = 'cell';
           cell.style.width = cell.style.height = `${cellSize}px`;
+          cell.style.setProperty('--cell-font-size', `${Math.max(17, Math.min(52, cellSize * 0.7))}px`);
+          cell.cellSize = cellSize;
           cell.style.transform = `translate3d(${(x-offset)*cellSize + shift}px, ${(y-offset)*cellSize + shift}px, ${(z-offset)*cellSize}px)`;
           cell.dataset.x = x; cell.dataset.y = y; cell.dataset.z = z;
           cell.cx = x; cell.cy = y; cell.cz = z;
@@ -2777,7 +3475,8 @@ function nextStimulus() {
 
   if (sizeOn.checked) {
     size = sizes[Math.floor(Math.random()*sizes.length)];
-    for (let i = 0; i < cell.faces.length; i++) cell.faces[i].style.fontSize = `${size}px`;
+    const renderedSize = Math.max(15, Math.min(size, cell.cellSize * 0.78));
+    for (let i = 0; i < cell.faces.length; i++) cell.faces[i].style.fontSize = `${renderedSize}px`;
   }
 
   history.push({ cellIndex, cell, sound, color, shape, size });
@@ -2983,6 +3682,10 @@ const DIR_TYPES = ['north', 'south', 'east', 'west', 'above', 'below'];
         minutesEl.textContent = Math.floor(minutesToday);
       }
       sessionStart = null;
+    }
+
+    if (pendingCubeResize) {
+      scheduleViewportSync(true);
     }
   }
 
@@ -3249,7 +3952,7 @@ if (acc >= winThresh) {
   setRandomRotation();
   applyRotationMode();
   document.documentElement.style.setProperty('--user-cube-size', `${cubeSize.value}px`);
-  buildCube(+cubeDimension.value || 3);
+  syncViewportMetrics(true);
   updateResponseConsoleVisibility();
   updateTrialCardVisibility();
   updateModalitiesUi();
@@ -3511,17 +4214,21 @@ if (acc >= winThresh) {
       responseConsole.style.display = '';
       document.body.classList.remove('console-hidden');
     }
+    scheduleViewportSync();
   }
 
   hideResponseConsole.addEventListener('change', updateResponseConsoleVisibility);
 
   let resizeTimeout;
-  window.addEventListener('resize', () => {
+  function handleViewportResize() {
     clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-      buildCube(+cubeDimension.value || 3);
-    }, 150);
-  });
+    resizeTimeout = setTimeout(() => scheduleViewportSync(), 80);
+  }
+  window.addEventListener('resize', handleViewportResize, { passive: true });
+  window.addEventListener('orientationchange', () => setTimeout(() => scheduleViewportSync(), 120), { passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleViewportResize, { passive: true });
+  }
 
 
   const statsBtn = document.getElementById('statsBtn');
@@ -4236,6 +4943,7 @@ if (acc >= winThresh) {
 
   function updateModalitiesUi() {
     const q = s => document.querySelector(s);
+    const dock = q('.dock');
     
     const syncPanel = (checkbox, selector) => {
       const panel = q(selector);
@@ -4252,6 +4960,12 @@ if (acc >= winThresh) {
     syncPanel(colorOn, '.panel.col');
     syncPanel(shapeOn, '.panel.chr');
     syncPanel(sizeOn, '.panel.siz');
+
+    if (dock) {
+      const simpleCount = Number(soundOn.checked) + Number(colorOn.checked) + Number(sizeOn.checked);
+      dock.dataset.simpleCount = String(simpleCount);
+    }
+    scheduleViewportSync();
   }
 </script>
 </body>
