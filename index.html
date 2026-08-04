@@ -857,47 +857,53 @@
       border-color: var(--border-bright);
     }
 
-    /* ---------- CHARACTER REFERENCE PANEL ---------- */
-    .char-ref {
+    .pregame-overlay {
       position: fixed;
-      right: 20px;
-      top: 90px;
-      width: 210px;
+      inset: 0;
+      background: rgba(5, 7, 12, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .pregame-overlay.visible {
+      display: flex;
+      opacity: 1;
+    }
+    .pregame-modal {
       background: linear-gradient(180deg, var(--panel), var(--panel-2));
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 14px;
-      box-shadow: var(--shadow);
-      z-index: 15;
-      display: none;
-      overflow: hidden;
+      padding: 24px;
+      box-shadow: var(--shadow-lg);
+      width: 280px;
+      text-align: center;
     }
-    .char-ref.visible { display: block; }
-    .char-ref::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--char-c);
-      opacity: 0.85;
-    }
-    .char-ref-header {
-      margin-bottom: 10px;
+    .pregame-title {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text);
+      margin-bottom: 20px;
     }
     .char-ref-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 1fr 1fr;
-      gap: 6px;
+      gap: 8px;
       position: relative;
     }
     .char-ref-cell {
-      padding: 14px 8px;
+      padding: 24px 8px;
       background: rgba(52, 211, 153, 0.08);
       border: 1px solid rgba(52, 211, 153, 0.4);
-      border-radius: 8px;
+      border-radius: 10px;
       text-align: center;
-      font-size: 18px;
+      font-size: 24px;
       font-weight: 700;
       font-family: 'JetBrains Mono', ui-monospace, monospace;
       letter-spacing: 0.5px;
@@ -906,32 +912,21 @@
     .char-ref-axis {
       display: flex;
       justify-content: space-between;
-      font-size: 9px;
+      font-size: 10px;
       color: var(--text-faint);
       text-transform: uppercase;
       letter-spacing: 1.5px;
-      margin-top: 8px;
-      padding: 0 2px;
+      margin-top: 12px;
+      padding: 0 4px;
     }
     .char-ref-legend {
-      margin-top: 10px;
-      font-size: 9px;
+      margin-top: 12px;
+      font-size: 10px;
       color: var(--text-faint);
       text-align: center;
       letter-spacing: 1.2px;
       text-transform: uppercase;
       line-height: 1.5;
-    }
-
-    @media (max-width: 1180px) {
-      .char-ref {
-        position: static;
-        width: auto;
-        margin: 0 24px 16px;
-      }
-    }
-    @media (max-width: 600px) {
-      .char-ref { margin: 0 14px 16px; }
     }
 
     /* ---------- FEEDBACK TOAST ---------- */
@@ -1998,16 +1993,13 @@
   </div>
 </aside>
 
-<!-- CHARACTER REFERENCE PANEL -->
-<aside class="char-ref" id="charReference">
-  <div class="char-ref-header">
-    <div class="panel-title"><span class="bullet" style="background:var(--char-c);box-shadow:0 0 8px var(--char-c);"></span>Set Layout</div>
+<div class="pregame-overlay" id="pregameOverlay">
+  <div class="pregame-modal">
+    <div class="pregame-title">Memorize Set Layout</div>
+    <div class="char-ref-grid" id="pregameGrid"></div>
+    <button class="btn primary" id="pregameReadyBtn" style="margin-top: 24px; width: 100%; justify-content: center; height: 44px; font-size: 14px;">Ready</button>
   </div>
-  <div class="char-ref-grid" id="charReferenceGrid"></div>
-  <div class="char-ref-axis"><span>← Left</span><span>Right →</span></div>
-  <div class="char-ref-legend">Sets ↑Up / ↓Down · ←L / R→</div>
-</aside>
-
+</div>
 
 <div class="stats-modal-backdrop" id="statsBackdrop"></div>
 
@@ -2306,8 +2298,9 @@
   };
   let charGridLayout = null;
 
-  const charReference = document.getElementById('charReference');
-  const charReferenceGrid = document.getElementById('charReferenceGrid');
+  const pregameOverlay = document.getElementById('pregameOverlay');
+  const pregameGrid = document.getElementById('pregameGrid');
+  const pregameReadyBtn = document.getElementById('pregameReadyBtn');
 
   let audioCtx = null;
   function initAudio() {
@@ -2552,9 +2545,8 @@ function computeSmartRotation(now) {
   }
 
   function renderCharReference() {
-    charReferenceGrid.innerHTML = '';
+    pregameGrid.innerHTML = '';
     if (!charGridLayout) return;
-    // place sets in the 2x2 grid by their (x, y) position
     const cells = [[null, null], [null, null]];
     Object.entries(charGridLayout).forEach(([setKey, pos]) => {
       cells[pos.y][pos.x] = setKey;
@@ -2564,7 +2556,7 @@ function computeSmartRotation(now) {
         const cell = document.createElement('div');
         cell.className = 'char-ref-cell';
         cell.textContent = cells[y][x] || '';
-        charReferenceGrid.appendChild(cell);
+        pregameGrid.appendChild(cell);
       }
     }
   }
@@ -2579,8 +2571,8 @@ function computeSmartRotation(now) {
   }
   feedbackMode.addEventListener('change', updateTrialCardVisibility);
 
-  function showCharReference() { charReference.classList.add('visible'); }
-  function hideCharReference() { charReference.classList.remove('visible'); }
+  function showPregameOverlay() { pregameOverlay.classList.add('visible'); }
+  function hidePregameOverlay() { pregameOverlay.classList.remove('visible'); }
 
   function getTargetCubeSize() {
     let configSize = parseInt(cubeSize.value, 10);
@@ -2889,6 +2881,41 @@ const DIR_TYPES = ['north', 'south', 'east', 'west', 'above', 'below'];
     }
   }
 
+  function actualGameStart() {
+    hidePregameOverlay();
+    
+    document.body.classList.add('game-active');
+    startBtn.innerHTML = '■ Stop';
+    history = [];
+    expected.clear();
+    falseAlarms.clear();
+    currentIntervalResponses.clear();
+    hideFeedback();
+    intervalCount = 0;
+    correct = 0;
+    total = 0;
+    resetModalityStats();
+    updateAccuracy();
+    intervalCountEl.textContent = '0';
+
+    startGameTimeout = setTimeout(() => {
+      sessionStart = Date.now();
+      initTimerWorker();
+      gameActive = true;
+      const msVal = Math.max(500, parseInt(intervalMs.value, 10) || 2500);
+      const isiVal = Math.min(msVal - 100, Math.max(50, parseInt(isiMs.value, 10) || 350));
+      const activeDur = Math.max(50, msVal - isiVal);
+      timerWorker.postMessage({
+        action: 'start',
+        interval: msVal,
+        activeDuration: activeDur
+      });
+      startGameTimeout = null;
+    }, 500);
+  }
+
+  pregameReadyBtn.onclick = actualGameStart;
+
   startBtn.onclick = () => {
     startBtn.blur();
 
@@ -2904,42 +2931,13 @@ const DIR_TYPES = ['north', 'south', 'east', 'west', 'above', 'below'];
       stopGame();
       updateRotationTempoCache();
       
-      document.body.classList.add('game-active');
-      startBtn.innerHTML = '■ Stop';
-      history = [];
-      expected.clear();
-      falseAlarms.clear();
-      currentIntervalResponses.clear();
-      hideFeedback();
-      intervalCount = 0;
-      correct = 0;
-      total = 0;
-      resetModalityStats();
-      updateAccuracy();
-      intervalCountEl.textContent = '0';
-
       if (shapeOn.checked) {
         generateCharGrid();
         renderCharReference();
-        showCharReference();
+        showPregameOverlay();
       } else {
-        hideCharReference();
+        actualGameStart();
       }
-
-      startGameTimeout = setTimeout(() => {
-        sessionStart = Date.now();
-        initTimerWorker();
-        gameActive = true;
-        const msVal = Math.max(500, parseInt(intervalMs.value, 10) || 2500);
-        const isiVal = Math.min(msVal - 100, Math.max(50, parseInt(isiMs.value, 10) || 350));
-        const activeDur = Math.max(50, msVal - isiVal);
-        timerWorker.postMessage({
-          action: 'start',
-          interval: msVal,
-          activeDuration: activeDur
-        });
-        startGameTimeout = null;
-      }, 500);
     }
   };
 
@@ -2970,7 +2968,7 @@ const DIR_TYPES = ['north', 'south', 'east', 'west', 'above', 'below'];
     }
 
     hideFeedback();
-    hideCharReference();
+    hidePregameOverlay();
 
     if (sessionStart && intervalCount > 0 && total > 0) {
       if (naturalEnd || infiniteModeOn.checked) {
