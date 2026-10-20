@@ -486,7 +486,11 @@
         justify-content: center;
       }
 
-      .panel.pos, .panel.snd, .panel.col, .panel.siz {
+      .panel {
+        max-width: none;
+      }
+
+      .panel.snd, .panel.col, .panel.siz {
         flex: 1 1 180px;
         max-width: 240px;
       }
@@ -494,10 +498,6 @@
       .panel.dir, .panel.chr {
         flex: 1.5 1 260px;
         max-width: 320px;
-      }
-      
-      .panel {
-        max-width: none;
       }
     }
     .panel::before {
@@ -508,7 +508,6 @@
       background: var(--panel-accent, var(--accent));
       opacity: 0.8;
     }
-    .panel.pos { --panel-accent: var(--position-c); }
     .panel.dir { --panel-accent: var(--direction-c); }
     .panel.snd { --panel-accent: var(--sound-c); }
     .panel.col { --panel-accent: var(--color-c); }
@@ -614,7 +613,6 @@
     .compass .c-dn { grid-column: 3; grid-row: 3; }
     .panel.chr .c-dn { grid-column: 1; grid-row: 1; }
     .panel.chr .c-up { grid-column: 3; grid-row: 1; }
-    .panel.chr .c-dn { grid-column: 1; grid-row: 1; }
     .compass .c-mid {
       grid-column: 2; grid-row: 2;
     }
@@ -990,10 +988,6 @@
     }
     .feedback-toast .fb-items {
       color: var(--text-dim);
-    }
-    @keyframes feedbackIn {
-      from { opacity: 0; transform: translate(-50%, -4px); }
-      to   { opacity: 1; transform: translate(-50%, 0); }
     }
 
     /* ---------- FOOTER ---------- */
@@ -2580,19 +2574,19 @@
     <div id="autoProgressionControls" style="display: none; margin-top: 10px;">
       <div class="setting-group">
         <label id="apWinThresholdLabel">Win Threshold</label>
-        <input type="range" id="apWinThreshold" min="50" max="100" step="1" value="80" class="ap-slider" />
+        <input type="range" id="apWinThreshold" min="50" max="100" step="1" value="86" class="ap-slider" />
       </div>
       <div class="setting-group">
         <label id="apWinStreakLabel">Win Streak</label>
-        <input type="range" id="apWinStreak" min="1" max="10" step="1" value="1" class="ap-slider" />
+        <input type="range" id="apWinStreak" min="1" max="10" step="1" value="2" class="ap-slider" />
       </div>
       <div class="setting-group">
         <label id="apLoseThresholdLabel">Lose Threshold</label>
-        <input type="range" id="apLoseThreshold" min="10" max="70" step="1" value="50" class="ap-slider" />
+        <input type="range" id="apLoseThreshold" min="10" max="70" step="1" value="55" class="ap-slider" />
       </div>
       <div class="setting-group">
         <label id="apLoseStreakLabel">Lose Streak</label>
-        <input type="range" id="apLoseStreak" min="1" max="10" step="1" value="1" class="ap-slider" />
+        <input type="range" id="apLoseStreak" min="1" max="10" step="1" value="2" class="ap-slider" />
       </div>
     </div>
   </div> 
@@ -2614,7 +2608,7 @@
     </label>
     <label class="toggle-row">
       <span class="tr-label"><span class="tr-icon">A</span>Character</span>
-      <input type="checkbox" id="shapeOn">
+      <input type="checkbox" id="shapeOn" checked>
     </label>
     <label class="toggle-row">
       <span class="tr-label"><span class="tr-icon">⬚</span>Size</span>
@@ -2813,7 +2807,6 @@
   let cells = [];
   let history = [];
   let expected = new Set();
-  let falseAlarms = new Set();
   let timerWorker = null;
   let gameActive = false;
   let intervalCount = 0;
@@ -2956,7 +2949,6 @@
   }
 
   const rotationState = {
-    velocities: new Float64Array(3),
     lastTime: 0
   };
 
@@ -3039,10 +3031,6 @@ function computeSmartRotation(now) {
     rotationState.currentAxis[1] /= len;
     rotationState.currentAxis[2] /= len;
   }
-
-  rotationState.velocities[0] = rotationState.currentAxis[0] * baseRotationSpeedDegSec;
-  rotationState.velocities[1] = rotationState.currentAxis[1] * baseRotationSpeedDegSec;
-  rotationState.velocities[2] = rotationState.currentAxis[2] * baseRotationSpeedDegSec;
 
   let angle = baseRotationSpeedDegSec * dt;
 
@@ -3141,7 +3129,7 @@ function computeSmartRotation(now) {
         stopGame();
       }
     } else {
-      startSmartRotation();
+      applyRotationMode();
     }
   });
 
@@ -3421,7 +3409,6 @@ function nextStimulus() {
           correct++;
           if (mod) modalityStats[mod].correct++;
         } else if (!expected.has(feat) && currentIntervalResponses.has(feat)) {
-          falseAlarms.add(feat);
           wrong.push(feat);
         } else if (expected.has(feat) && !currentIntervalResponses.has(feat)) {
           missed.push(feat);
@@ -3442,7 +3429,6 @@ function nextStimulus() {
     hideFeedback();
   }
 
-  falseAlarms.clear();
   currentIntervalResponses.clear();
 
   if (!infiniteModeOn.checked && maxTrials > 0 && intervalCount >= maxTrials) {
@@ -3596,7 +3582,6 @@ const DIR_TYPES = ['north', 'south', 'east', 'west', 'above', 'below'];
     startBtn.innerHTML = '■ Stop';
     history = [];
     expected.clear();
-    falseAlarms.clear();
     currentIntervalResponses.clear();
     hideFeedback();
     intervalCount = 0;
@@ -3653,7 +3638,9 @@ const DIR_TYPES = ['north', 'south', 'east', 'west', 'above', 'below'];
     document.body.classList.remove('game-active');
     startBtn.innerHTML = '▶ Play';
 
-    if (naturalEnd === false && gameActive) {
+    const wasActive = gameActive;
+
+    if (naturalEnd === false && wasActive) {
       winStreakCount = 0;
       loseStreakCount = 0;
       saveSettings();
@@ -3670,10 +3657,27 @@ const DIR_TYPES = ['north', 'south', 'east', 'west', 'above', 'below'];
     }
     clearCells();
 
+    if (!naturalEnd && wasActive && history.length > +nValue.value) {
+      const featuresOfInterest = new Set([...expected, ...currentIntervalResponses]);
+      if (featuresOfInterest.size > 0) {
+        featuresOfInterest.forEach(feat => {
+          const mod = getModalityOfFeature(feat);
+          total++;
+          if (mod && modalityStats[mod]) modalityStats[mod].total++;
+          if (expected.has(feat) && currentIntervalResponses.has(feat)) {
+            correct++;
+            if (mod && modalityStats[mod]) modalityStats[mod].correct++;
+          }
+        });
+        updateAccuracy();
+      }
+    }
+
     if (expected.size) {
       expected.clear();
       updateAccuracy();
     }
+    currentIntervalResponses.clear();
 
     hideFeedback();
     hidePregameOverlay();
@@ -3871,47 +3875,40 @@ const DIR_TYPES = ['north', 'south', 'east', 'west', 'above', 'below'];
   function checkAutoProgression() {
     if (!autoProgressionOn.checked) return;
 
-    let currentTotal = total + expected.size;
-    const acc = currentTotal > 0 ? (correct / currentTotal) * 100 : 0;
+    const acc = total > 0 ? (correct / total) * 100 : 0;
     
     const winThresh = parseInt(apWinThreshold.value, 10);
     const winStreakReq = parseInt(apWinStreak.value, 10);
     const loseThresh = parseInt(apLoseThreshold.value, 10);
     const loseStreakReq = parseInt(apLoseStreak.value, 10);
 
-if (acc >= winThresh) {
+    if (acc >= winThresh) {
       winStreakCount++;
       loseStreakCount = 0;
-      saveSettings();
       if (winStreakCount >= winStreakReq) {
         const oldN = +nValue.value;
         nValue.value = oldN + 1;
-        saveSettings();
         updateTopbarN();
         winStreakCount = 0;
-        saveSettings();
         showAutoProgressionToast(`Level Up! N increased to ${nValue.value}`);
       }
     } else if (acc < loseThresh) {
       loseStreakCount++;
       winStreakCount = 0;
-      saveSettings();
       if (loseStreakCount >= loseStreakReq) {
         const oldN = +nValue.value;
         if (oldN > 1) {
           nValue.value = oldN - 1;
-          saveSettings();
           updateTopbarN();
           showAutoProgressionToast(`Level Down: N decreased to ${nValue.value}`);
         }
         loseStreakCount = 0;
-        saveSettings();
       }
     } else {
       winStreakCount = 0;
       loseStreakCount = 0;
-      saveSettings();
     }
+    saveSettings();
   }
 
   function showAutoProgressionToast(message) {
@@ -3947,6 +3944,7 @@ if (acc >= winThresh) {
   nValue.addEventListener('change', () => {
     winStreakCount = 0;
     loseStreakCount = 0;
+    saveSettings();
     updateTopbarN();
   });
 
@@ -4351,7 +4349,7 @@ if (acc >= winThresh) {
       document.getElementById('statsAccuracyValue').textContent = '—';
       document.getElementById('statsBestValue').textContent = '—';
       document.getElementById('statsMinutesValue').textContent = '0m';
-      statsRecentBody.innerHTML = '<tr><td colspan="6"><div class="stats-empty">No completed sessions yet</div></td></tr>';
+      statsRecentBody.innerHTML = '<tr><td colspan="7"><div class="stats-empty">No completed sessions yet</div></td></tr>';
       return;
     }
 
@@ -4931,9 +4929,11 @@ if (acc >= winThresh) {
       
       document.addEventListener('fullscreenchange', () => {
         if (document.fullscreenElement) {
-          fullscreenBtn.textContent = '⧉';
+          fullscreenBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>';
+          fullscreenBtn.title = 'Exit Fullscreen';
         } else {
-          fullscreenBtn.textContent = '⛶';
+          fullscreenBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>';
+          fullscreenBtn.title = 'Toggle Fullscreen';
         }
       });
     }
